@@ -11,6 +11,9 @@ const PHASE_COLORS: Record<string, { from: string; to: string; badge: string }> 
   Luteal:     { from: "#60A5FA", to: "#93C5FD", badge: "#3B82F6" },
 };
 
+const SEVERITY_COLORS = { Mild: "#34D399", Moderate: "#F59E0B", Severe: "#EF4444" };
+const SEVERITY_BG    = { Mild: "#ECFDF5", Moderate: "#FFFBEB", Severe: "#FEF2F2" };
+
 function ScoreBar({ label, value, max, color, icon }: { label: string; value: number; max: number; color: string; icon: string }) {
   const pct = Math.round((value / max) * 100);
   return (
@@ -57,17 +60,36 @@ function SectionCard({ title, icon, children }: { title: string; icon: string; c
   );
 }
 
-const renderNarrative = (text: string) =>
-  text.split("\n").filter(Boolean).map((para, i) => {
-    const withBold = para.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    return (
-      <p
-        key={i}
-        className={`text-[13px] leading-relaxed text-gray-700 ${i > 0 ? "mt-2" : ""}`}
-        dangerouslySetInnerHTML={{ __html: withBold }}
-      />
-    );
-  });
+/** Safe bold renderer — NO dangerouslySetInnerHTML. Splits on **text** and renders spans. */
+function SafeText({ text, className, boldColor }: { text: string; className?: string; boldColor?: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <span className={className}>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={i} style={boldColor ? { color: boldColor } : undefined}>
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
+function SafeParagraphs({ text, paraClass, boldColor }: { text: string; paraClass?: string; boldColor?: string }) {
+  return (
+    <>
+      {text.split("\n").filter(Boolean).map((para, i) => (
+        <p key={i} className={`${paraClass ?? ""} ${i > 0 ? "mt-2" : ""}`}>
+          <SafeText text={para} boldColor={boldColor} />
+        </p>
+      ))}
+    </>
+  );
+}
 
 export const HealthReportScreen = () => {
   const { navigate, user, cycleData, logs, todayWater } = useApp();
@@ -84,9 +106,6 @@ export const HealthReportScreen = () => {
 
   // ── Derived stats from logs ──────────────────────────────────────────────
   const stats = useMemo(() => {
-    const now = new Date();
-    const monthStr = now.toISOString().slice(0, 7); // "YYYY-MM"
-
     const allLogs = logs;
     const waterLogs = allLogs.filter(l => l.water && l.water > 0);
     const weightLogs = allLogs.filter(l => l.weight && l.weight > 0);
@@ -98,17 +117,14 @@ export const HealthReportScreen = () => {
     const avgWeight = weightLogs.length
       ? parseFloat((weightLogs.reduce((s, l) => s + (l.weight ?? 0), 0) / weightLogs.length).toFixed(1))
       : 0;
-    const latestWeight = weightLogs.length ? weightLogs[weightLogs.length - 1].weight ?? 0 : 0;
 
     // Mood distribution
     const moodCounts: Record<string, number> = {};
-    moodLogs.forEach(l => {
-      if (l.mood) moodCounts[l.mood] = (moodCounts[l.mood] ?? 0) + 1;
-    });
+    moodLogs.forEach(l => { if (l.mood) moodCounts[l.mood] = (moodCounts[l.mood] ?? 0) + 1; });
     const sortedMoods = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const totalMoodLogs = moodLogs.length;
 
-    // Symptom extraction from notes
+    // Symptom extraction + severity breakdown from notes
     const symptomKeywords = ["cramps", "bloating", "fatigue", "headache", "acne", "backache", "nausea", "insomnia", "spotting"];
     const symptomCounts: Record<string, number> = {};
     allLogs.forEach(l => {
@@ -121,7 +137,39 @@ export const HealthReportScreen = () => {
     });
     const topSymptoms = Object.entries(symptomCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    // Fertile window (ovulation at day 14)
+    // Severity: based on frequency across logs
+    const getSeverity = (count: number): keyof typeof SEVERITY_COLORS => {
+      if (count >= 4) return "Severe";
+      if (count >= 2) return "Moderate";
+      return "Mild";
+    };
+
+    // Sleep quality from notes — parses "Sleep: X/5" patterns and quality words
+    const sleepLogs = allLogs.filter(l => l.notes && /sleep/i.test(l.notes));
+    let avgSleepScore = 0;
+    let sleepQualityLabel = "Not tracked";
+    if (sleepLogs.length > 0) {
+      const scores: number[] = [];
+      sleepLogs.forEach(l => {
+        if (!l.notes) return;
+        const match = l.notes.match(/sleep[:\s]+(\d+)[\/\s]*(?:\d+)?/i);
+        if (match) {
+          scores.push(parseInt(match[1], 10));
+        } else if (/good|great|excellent/i.test(l.notes)) {
+          scores.push(4);
+        } else if (/poor|bad|terrible/i.test(l.notes)) {
+          scores.push(2);
+        } else {
+          scores.push(3);
+        }
+      });
+      avgSleepScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      if (avgSleepScore >= 4) sleepQualityLabel = "Good";
+      else if (avgSleepScore >= 3) sleepQualityLabel = "Average";
+      else sleepQualityLabel = "Poor";
+    }
+
+    // Fertile window
     const ovulationDate = new Date(cycleData.lastPeriodStart);
     ovulationDate.setDate(ovulationDate.getDate() + 13);
     const fertileStart = new Date(ovulationDate);
@@ -129,19 +177,15 @@ export const HealthReportScreen = () => {
     const fertileEnd = new Date(ovulationDate);
     fertileEnd.setDate(fertileEnd.getDate() + 1);
 
-    const fmtDate = (d: Date) =>
-      d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-    // Regularity score (simple: more logs = more regular)
     const regularityScore = Math.min(100, Math.round(50 + allLogs.length * 5));
 
     return {
-      avgWater,
-      avgWeight,
-      latestWeight,
-      topSymptoms,
-      sortedMoods,
-      totalMoodLogs,
+      avgWater, avgWeight,
+      topSymptoms, sortedMoods, totalMoodLogs,
+      getSeverity,
+      sleepLogs: sleepLogs.length, sleepQualityLabel, avgSleepScore,
       fertileWindowStr: `${fmtDate(fertileStart)} – ${fmtDate(fertileEnd)}`,
       fertileStart: fmtDate(fertileStart),
       fertileEnd: fmtDate(fertileEnd),
@@ -190,7 +234,6 @@ export const HealthReportScreen = () => {
       const decoder = new TextDecoder();
       let buf = "";
       let acc = "";
-
       if (!reader) throw new Error("No body");
 
       while (true) {
@@ -203,10 +246,7 @@ export const HealthReportScreen = () => {
           if (!line.startsWith("data: ")) continue;
           try {
             const json = JSON.parse(line.slice(6));
-            if (json.content) {
-              acc += json.content;
-              setNarrative(acc);
-            }
+            if (json.content) { acc += json.content; setNarrative(acc); }
             if (json.done) setNarrativeDone(true);
             if (json.error) setNarrativeError(json.error);
           } catch { /* ignore */ }
@@ -236,20 +276,14 @@ export const HealthReportScreen = () => {
         import("html2canvas"),
         import("jspdf"),
       ]);
-
       const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#FAF5FF",
-        logging: false,
+        scale: 2, useCORS: true, backgroundColor: "#FAF5FF", logging: false,
       });
-
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pdfW = pdf.internal.pageSize.getWidth();
       const pdfH = (canvas.height * pdfW) / canvas.width;
       const pageH = pdf.internal.pageSize.getHeight();
-
       if (pdfH <= pageH) {
         pdf.addImage(imgData, "PNG", 0, 0, pdfW, pdfH);
       } else {
@@ -260,9 +294,7 @@ export const HealthReportScreen = () => {
           if (y < pdfH) pdf.addPage();
         }
       }
-
-      const month = new Date().toISOString().slice(0, 7);
-      pdf.save(`FlowAI_Report_${month}.pdf`);
+      pdf.save(`FlowAI_Report_${new Date().toISOString().slice(0, 7)}.pdf`);
     } catch (err) {
       console.error("PDF export failed:", err);
     } finally {
@@ -270,19 +302,22 @@ export const HealthReportScreen = () => {
     }
   };
 
-  // ── Share ─────────────────────────────────────────────────────────────────
+  // ── Share — copies a shareable report link (clipboard fallback) ──────────
   const handleShare = async () => {
-    const text = `My FlowAI Health Report 🌸\n\nCycle Phase: ${cycleData.phase} (Day ${cycleData.currentDay})\nNext Period: ${stats.nextPeriodStr}\nFertile Window: ${stats.fertileWindowStr}\nRegularity: ${stats.regularityScore}/100\n\nGenerated by FlowAI — AI Period Tracker`;
+    const shareUrl = `${window.location.origin}?report=health&user=${encodeURIComponent(user.name)}&phase=${encodeURIComponent(cycleData.phase)}`;
+    const shareTitle = `${user.name}'s FlowAI Health Report`;
+    const shareText = `Check out my FlowAI Health Report 🌸\n\nCycle Phase: ${cycleData.phase} (Day ${cycleData.currentDay})\nNext Period: ${stats.nextPeriodStr}\nFertile Window: ${stats.fertileWindowStr}\nCycle Regularity: ${stats.regularityScore}/100\n\nGenerated by FlowAI — AI Period Tracker`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: "My FlowAI Health Report", text });
-      } catch { /* user cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-      setShareSuccess(true);
-      setTimeout(() => setShareSuccess(false), 2500);
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+        return;
+      } catch { /* user cancelled or unsupported */ }
     }
+    // Clipboard fallback — copies both the link and summary
+    await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
+    setShareSuccess(true);
+    setTimeout(() => setShareSuccess(false), 2500);
   };
 
   const reportMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -349,9 +384,9 @@ export const HealthReportScreen = () => {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute top-16 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2 rounded-full z-50 shadow-lg"
+                className="absolute top-16 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2 rounded-full z-50 shadow-lg whitespace-nowrap"
               >
-                ✓ Copied to clipboard!
+                ✓ Report link copied!
               </motion.div>
             )}
           </AnimatePresence>
@@ -364,7 +399,10 @@ export const HealthReportScreen = () => {
             {/* 1. User Profile */}
             <div
               className="mx-5 mt-4 mb-4 rounded-3xl p-5 shadow-sm"
-              style={{ background: `linear-gradient(135deg, ${phaseStyle.from}18 0%, ${phaseStyle.to}18 100%)`, border: `1.5px solid ${phaseStyle.from}30` }}
+              style={{
+                background: `linear-gradient(135deg, ${phaseStyle.from}18 0%, ${phaseStyle.to}18 100%)`,
+                border: `1.5px solid ${phaseStyle.from}30`,
+              }}
             >
               <div className="flex items-center gap-4">
                 <div
@@ -377,10 +415,7 @@ export const HealthReportScreen = () => {
                   <p className="text-[16px] font-bold text-gray-900">{user.name}</p>
                   <p className="text-[12px] text-gray-500 mt-0.5">{user.email}</p>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span
-                      className="text-[10px] font-bold px-2.5 py-1 rounded-full text-white"
-                      style={{ background: phaseStyle.badge }}
-                    >
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full text-white" style={{ background: phaseStyle.badge }}>
                       {cycleData.phase} Phase
                     </span>
                     <span className="text-[10px] text-gray-400">Day {cycleData.currentDay} of {cycleData.cycleLength}</span>
@@ -426,9 +461,7 @@ export const HealthReportScreen = () => {
                 <ScoreBar
                   label="Prediction Accuracy"
                   value={Math.min(100, Math.round(60 + stats.logCount * 3))}
-                  max={100}
-                  color="#8B5CF6"
-                  icon="🎯"
+                  max={100} color="#8B5CF6" icon="🎯"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -443,22 +476,59 @@ export const HealthReportScreen = () => {
               </div>
             </SectionCard>
 
-            {/* 4. Symptom Analysis */}
+            {/* 4. Symptom Analysis — frequency + severity breakdown */}
             <SectionCard title="Symptom Analysis" icon="🩺">
               {stats.topSymptoms.length > 0 ? (
-                <div className="space-y-2.5">
-                  {stats.topSymptoms.map(([symptom, count]) => (
-                    <ScoreBar
-                      key={symptom}
-                      label={symptom.charAt(0).toUpperCase() + symptom.slice(1)}
-                      value={count}
-                      max={Math.max(...stats.topSymptoms.map(([, c]) => c))}
-                      color={phaseStyle.from}
-                      icon={symptom === "cramps" ? "😣" : symptom === "fatigue" ? "😴" : symptom === "headache" ? "🤕" : symptom === "bloating" ? "🤰" : "😕"}
-                    />
-                  ))}
+                <>
+                  <div className="space-y-3 mb-4">
+                    {stats.topSymptoms.map(([symptom, count]) => {
+                      const severity = stats.getSeverity(count);
+                      const sevColor = SEVERITY_COLORS[severity];
+                      const sevBg = SEVERITY_BG[severity];
+                      const icon = symptom === "cramps" ? "😣" : symptom === "fatigue" ? "😴" : symptom === "headache" ? "🤕" : symptom === "bloating" ? "🤰" : symptom === "nausea" ? "🤢" : "😕";
+                      return (
+                        <div key={symptom}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm">{icon}</span>
+                              <span className="text-[12px] font-medium text-gray-700">
+                                {symptom.charAt(0).toUpperCase() + symptom.slice(1)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-400">{count}x logged</span>
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                style={{ background: sevBg, color: sevColor }}
+                              >
+                                {severity}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ background: sevColor }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.round((count / Math.max(...stats.topSymptoms.map(([, c]) => c))) * 100)}%` }}
+                              transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Severity legend */}
+                  <div className="flex gap-2">
+                    {(["Mild", "Moderate", "Severe"] as const).map(sev => (
+                      <div key={sev} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl flex-1 justify-center" style={{ background: SEVERITY_BG[sev] }}>
+                        <div className="w-2 h-2 rounded-full" style={{ background: SEVERITY_COLORS[sev] }} />
+                        <span className="text-[11px] font-medium" style={{ color: SEVERITY_COLORS[sev] }}>{sev}</span>
+                      </div>
+                    ))}
+                  </div>
                   <p className="text-[11px] text-gray-400 text-center mt-2">Based on {stats.logCount} log entries</p>
-                </div>
+                </>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-4xl mb-2">📋</p>
@@ -502,13 +572,13 @@ export const HealthReportScreen = () => {
               )}
             </SectionCard>
 
-            {/* 6. Wellness Analysis */}
+            {/* 6. Wellness Analysis — water, weight, sleep quality summary */}
             <SectionCard title="Wellness Analysis" icon="💪">
               <div className="flex gap-2 mb-4">
                 <MiniStat
                   label="Avg Water"
                   value={stats.avgWater > 0 ? `${stats.avgWater}ml` : "—"}
-                  sub={stats.avgWater > 0 ? (stats.avgWater >= 2000 ? "✓ Good" : "↑ Drink more") : "Not tracked"}
+                  sub={stats.avgWater > 0 ? (stats.avgWater >= 2000 ? "✓ Goal met" : "↑ Drink more") : "Not tracked"}
                   color="#60A5FA"
                 />
                 <MiniStat
@@ -518,12 +588,38 @@ export const HealthReportScreen = () => {
                   color="#34D399"
                 />
                 <MiniStat
-                  label="Log Entries"
-                  value={`${stats.logCount}`}
-                  sub="This cycle"
-                  color="#F59E0B"
+                  label="Sleep"
+                  value={stats.sleepLogs > 0 ? stats.sleepQualityLabel : "—"}
+                  sub={stats.sleepLogs > 0 ? `${stats.sleepLogs} entries` : "Not tracked"}
+                  color={stats.sleepQualityLabel === "Good" ? "#34D399" : stats.sleepQualityLabel === "Average" ? "#F59E0B" : "#EF4444"}
                 />
               </div>
+
+              {/* Sleep quality bar */}
+              {stats.sleepLogs > 0 && (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">🌙</span>
+                      <span className="text-[12px] font-medium text-gray-700">Sleep Quality</span>
+                    </div>
+                    <span className="text-[12px] font-bold" style={{ color: stats.sleepQualityLabel === "Good" ? "#34D399" : stats.sleepQualityLabel === "Average" ? "#F59E0B" : "#EF4444" }}>
+                      {stats.sleepQualityLabel}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: stats.sleepQualityLabel === "Good" ? "#34D399" : stats.sleepQualityLabel === "Average" ? "#F59E0B" : "#EF4444" }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(stats.avgSleepScore / 5) * 100}%` }}
+                      transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Hydration bar */}
               {stats.avgWater > 0 && (
                 <ScoreBar
                   label="Hydration Goal (2000ml)"
@@ -533,9 +629,15 @@ export const HealthReportScreen = () => {
                   icon="💧"
                 />
               )}
+
+              {/* Log count */}
+              <div className="mt-3 flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
+                <span className="text-[12px] text-gray-600 flex items-center gap-2"><span>📝</span> Total Log Entries</span>
+                <span className="text-[13px] font-bold text-gray-700">{stats.logCount}</span>
+              </div>
             </SectionCard>
 
-            {/* 7. AI-Generated Narrative */}
+            {/* 7. AI-Generated Narrative — safe rendering, NO dangerouslySetInnerHTML */}
             <div className="mx-5 mb-4 rounded-3xl p-5 shadow-sm overflow-hidden relative"
               style={{ background: "linear-gradient(135deg, #1E1B4B 0%, #4C1D95 50%, #6D28D9 100%)" }}
             >
@@ -577,16 +679,11 @@ export const HealthReportScreen = () => {
                   </div>
                 ) : narrative ? (
                   <div>
-                    {narrative.split("\n").filter(Boolean).map((para, i) => {
-                      const withBold = para.replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-200">$1</strong>');
-                      return (
-                        <p
-                          key={i}
-                          className={`text-white/85 text-[13px] leading-relaxed ${i > 0 ? "mt-2" : ""}`}
-                          dangerouslySetInnerHTML={{ __html: withBold }}
-                        />
-                      );
-                    })}
+                    <SafeParagraphs
+                      text={narrative}
+                      paraClass="text-white/85 text-[13px] leading-relaxed"
+                      boldColor="#C4B5FD"
+                    />
                     {narrativeStreaming && (
                       <motion.span
                         animate={{ opacity: [1, 0] }}
