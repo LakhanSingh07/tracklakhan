@@ -20,11 +20,11 @@ const getDayType = (date: Date, lastPeriod: Date, cycleLength: number, periodLen
 };
 
 const dayColors: Record<DayType, { bg: string; text: string; dot?: string }> = {
-  period: { bg: "#8B0000", text: "white", dot: "#8B0000" },
+  period: { bg: "#dc143c", text: "white", dot: "#dc143c" },
   fertile: { bg: "#A78BFA22", text: "#A78BFA", dot: "#A78BFA" },
   ovulation: { bg: "#A78BFA", text: "white", dot: "#A78BFA" },
   normal: { bg: "transparent", text: "#1F2937" },
-  "future-period": { bg: "#FFEAEA", text: "#8B0000", dot: "#8B0000" },
+  "future-period": { bg: "#FFEAEA", text: "#dc143c", dot: "#dc143c" },
 };
 
 export const CalendarScreen = () => {
@@ -44,7 +44,7 @@ export const CalendarScreen = () => {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const phaseInfo = {
-    period: { label: "Period", color: "#8B0000", icon: "🩸" },
+    period: { label: "Period", color: "#dc143c", icon: "🩸" },
     fertile: { label: "Fertile Window", color: "#A78BFA", icon: "🌱" },
     ovulation: { label: "Ovulation", color: "#A78BFA", icon: "⭐" },
     normal: { label: "Normal", color: "#9CA3AF", icon: "○" },
@@ -125,9 +125,9 @@ export const CalendarScreen = () => {
                       <div
                         className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold relative"
                         style={{
-                          background: isSelected ? "#8B0000" : isToday ? "#FFF5F5" : dtype !== "normal" ? colors.bg : "transparent",
-                          color: isSelected ? "white" : isToday ? "#8B0000" : isFuture ? "#9CA3AF" : colors.text,
-                          border: isToday && !isSelected ? "2px solid #8B0000" : "none",
+                          background: isSelected ? "#dc143c" : isToday ? "#FFF5F5" : dtype !== "normal" ? colors.bg : "transparent",
+                          color: isSelected ? "white" : isToday ? "#dc143c" : isFuture ? "#9CA3AF" : colors.text,
+                          border: isToday && !isSelected ? "2px solid #dc143c" : "none",
                         }}
                       >
                         {day}
@@ -159,7 +159,7 @@ export const CalendarScreen = () => {
                 <h3 className="text-[16px] font-bold text-gray-900">
                   {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                 </h3>
-                <p className="text-sm font-medium" style={{ color: "#8B0000" }}>
+                <p className="text-sm font-medium" style={{ color: "#dc143c" }}>
                   Day {cycleDay} of cycle
                 </p>
               </div>
@@ -176,7 +176,7 @@ export const CalendarScreen = () => {
             {logForDate ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "Flow", value: logForDate.flow ?? "—", icon: "🩸", color: "#8B0000" },
+                  { label: "Flow", value: logForDate.flow ?? "—", icon: "🩸", color: "#dc143c" },
                   { label: "Mood", value: logForDate.mood ?? "—", icon: "", color: "#A78BFA" },
                   { label: "Notes", value: logForDate.notes ? logForDate.notes.substring(0, 20) + (logForDate.notes.length > 20 ? "…" : "") : "—", icon: "📝", color: "#60A5FA" },
                   { label: "Logged", value: "✓", icon: "✅", color: "#34D399" },
@@ -196,7 +196,7 @@ export const CalendarScreen = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate("log-entry")}
                   className="text-[13px] font-semibold"
-                  style={{ color: "#8B0000" }}
+                  style={{ color: "#dc143c" }}
                 >
                   + Add log
                 </motion.button>
@@ -210,11 +210,11 @@ export const CalendarScreen = () => {
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate("edit-period")}
               className="w-full py-4 rounded-2xl border-2 flex items-center justify-center gap-2 font-semibold"
-              style={{ borderColor: "#8B0000", color: "#8B0000" }}
+              style={{ borderColor: "#dc143c", color: "#dc143c" }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M11 4H4C3.4 4 3 4.4 3 5V20C3 20.6 3.4 21 4 21H19C19.6 21 20 20.6 20 20V13" stroke="#8B0000" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M18.5 2.5L21.5 5.5L12 15H9V12L18.5 2.5Z" stroke="#8B0000" strokeWidth="2" strokeLinejoin="round"/>
+                <path d="M11 4H4C3.4 4 3 4.4 3 5V20C3 20.6 3.4 21 4 21H19C19.6 21 20 20.6 20 20V13" stroke="#dc143c" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M18.5 2.5L21.5 5.5L12 15H9V12L18.5 2.5Z" stroke="#dc143c" strokeWidth="2" strokeLinejoin="round"/>
               </svg>
               Edit Period Dates
             </motion.button>

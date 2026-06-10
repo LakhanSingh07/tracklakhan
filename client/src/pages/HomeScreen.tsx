@@ -96,7 +96,7 @@ for (let d = 18; d <= 22; d++) PHASE_MAP[d] = "safe";
 for (let d = 23; d <= 28; d++) PHASE_MAP[d] = "verySafe";
 
 const PHASE_STYLE: Record<string, { bg: string; glow: string; text: string; label: string }> = {
-  menstruation: { bg: "#8B0000", glow: "rgba(139,0,0,0.25)", text: "#fff0f0", label: "Period" },
+  menstruation: { bg: "#dc143c", glow: "rgba(220,20,60,0.25)", text: "#fff0f0", label: "Period" },
   lowFertility:  { bg: "#FBBF24", glow: "rgba(251,191,36,0.18)",   text: "#92400e", label: "Low Fertility" },
   highFertility: { bg: "#F472B6", glow: "rgba(244,114,182,0.2)",   text: "#9d174d", label: "Fertile" },
   ovulation:     { bg: "#8B5CF6", glow: "rgba(139,92,246,0.25)",   text: "#5b21b6", label: "Ovulation" },
@@ -288,7 +288,7 @@ const SmartCycleDial = ({
                     cx={dp.x} cy={dp.y}
                     r={4.5}
                     fill="none"
-                    stroke="#8B0000"
+                    stroke="#dc143c"
                     strokeWidth={1.8}
                     strokeDasharray="2.8 2"
                     style={{ pointerEvents: "none" }}
@@ -334,7 +334,7 @@ const SmartCycleDial = ({
                     x={CX} y={CY - 4}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="#8B0000"
+                    fill="#dc143c"
                     fontSize={48}
                     fontWeight="800"
                     style={{ fontFamily: "Instrument Sans, sans-serif" }}
@@ -345,7 +345,7 @@ const SmartCycleDial = ({
                     x={CX} y={CY + 34}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="#8B0000"
+                    fill="#dc143c"
                     fontSize={13}
                     fontWeight="700"
                     style={{ fontFamily: "Instrument Sans, sans-serif" }}
@@ -559,11 +559,11 @@ export const HomeScreen = () => {
                       ${isToday
                         ? "text-white shadow-md"
                         : isPeriod ? "text-white" : "text-gray-500"}`}
-                      style={isToday ? { background: "linear-gradient(135deg, #FF8FA3, #FF657D)" } : isPeriod ? { background: "#8B0000" } : {}}
+                      style={isToday ? { background: "linear-gradient(135deg, #FF8FA3, #FF657D)" } : isPeriod ? { background: "#dc143c" } : {}}
                     >
                       {d.getDate()}
                     </div>
-                    {isPeriod && <div className="w-1 h-1 rounded-full" style={{ background: "#8B0000", opacity: isToday ? 1 : 0.5 }} />}
+                    {isPeriod && <div className="w-1 h-1 rounded-full" style={{ background: "#dc143c", opacity: isToday ? 1 : 0.5 }} />}
                   </motion.div>
                 );
               })}
