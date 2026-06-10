@@ -310,13 +310,13 @@ const SmartCycleDial = ({
               transition={{ duration: 0.18 }}
               style={{ transformOrigin: `${CX}px ${CY}px` }}
             >
-              {/* L2 — Phase label */}
+              {/* Phase label — top */}
               <text
-                x={CX} y={CY - 32}
+                x={CX} y={CY - 38}
                 textAnchor="middle"
                 dominantBaseline="central"
                 fill={activeStyle.bg}
-                fontSize={12}
+                fontSize={11}
                 fontWeight="600"
                 letterSpacing="1.4"
                 style={{ fontFamily: "Instrument Sans, sans-serif" }}
@@ -324,50 +324,75 @@ const SmartCycleDial = ({
                 {activeStyle.label.toUpperCase()}
               </text>
 
-              {/* L1 — Day number (dominant) */}
-              <text
-                x={CX} y={CY + 4}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill="#111827"
-                fontSize={52}
-                fontWeight="800"
-                style={{ fontFamily: "Instrument Sans, sans-serif" }}
-              >
-                {activeDay}
-              </text>
-
-              {/* L3 — Period status */}
+              {/* Hero — dominant countdown */}
               {isOnPeriod ? (
                 <motion.g
-                  animate={{ opacity: [0.85, 1, 0.85] }}
+                  animate={{ opacity: [0.9, 1, 0.9] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   <text
-                    x={CX} y={CY + 42}
+                    x={CX} y={CY - 4}
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="#FF6B8A"
+                    fontSize={48}
+                    fontWeight="800"
+                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    {Math.max(periodLength - currentDay + 1, 0)}
+                  </text>
+                  <text
+                    x={CX} y={CY + 34}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#FF6B8A"
+                    fontSize={13}
+                    fontWeight="700"
+                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    🩸 days remaining
+                  </text>
+                </motion.g>
+              ) : (
+                <>
+                  <text
+                    x={CX} y={CY - 4}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#111827"
+                    fontSize={52}
+                    fontWeight="800"
+                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    {daysUntilNextPeriod}
+                  </text>
+                  <text
+                    x={CX} y={CY + 34}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#94a3b8"
                     fontSize={12}
                     fontWeight="600"
                     style={{ fontFamily: "Instrument Sans, sans-serif" }}
                   >
-                    🩸 {periodLength - currentDay + 1}d remaining
+                    days to period
                   </text>
-                </motion.g>
-              ) : (
-                <text
-                  x={CX} y={CY + 42}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fill="#94a3b8"
-                  fontSize={12}
-                  fontWeight="500"
-                  style={{ fontFamily: "Instrument Sans, sans-serif" }}
-                >
-                  {daysUntilNextPeriod}d to period
-                </text>
+                </>
               )}
+
+              {/* Secondary — cycle day */}
+              <text
+                x={CX} y={CY + 54}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill={activeStyle.bg}
+                fillOpacity={0.65}
+                fontSize={10}
+                fontWeight="500"
+                style={{ fontFamily: "Instrument Sans, sans-serif" }}
+              >
+                Day {activeDay}
+              </text>
             </motion.g>
           </AnimatePresence>
         </svg>
@@ -420,7 +445,7 @@ const MoodButton = ({ emoji, label, color, onClick }: { emoji: string; label: st
 );
 
 export const HomeScreen = () => {
-  const { cycleData, user, navigate, logs } = useApp();
+  const { cycleData, user, navigate, logs, getTodayWaterTotal, waterGoal } = useApp();
   const today = new Date();
 
   const streak = useMemo(() => {
@@ -456,7 +481,7 @@ export const HomeScreen = () => {
     { label: "Cycle Length", value: String(Math.round(prediction.averageCycleLength)), unit: "days", icon: "🔄", color: "#FF657D", bg: "#FFF0F3" },
     { label: "Period Length", value: String(Math.round(prediction.averagePeriodLength)), unit: "days", icon: "📍", color: "#8B5CF6", bg: "#F5F0FF" },
     { label: prediction.usingAI ? "AI Next Period" : "Next Period", value: String(Math.max(0, aiDaysUntil)), unit: "days", icon: prediction.usingAI ? "🧠" : "📅", color: "#60A5FA", bg: "#EFF6FF" },
-    { label: "Water Today", value: "1.5", unit: "L", icon: "💧", color: "#34D399", bg: "#ECFDF5" },
+    { label: "Water Today", value: (getTodayWaterTotal() / 1000).toFixed(1), unit: "L", icon: "💧", color: "#34D399", bg: "#ECFDF5" },
   ];
 
   const moods = [
