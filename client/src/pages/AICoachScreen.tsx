@@ -22,6 +22,11 @@ interface HealthContext {
   recentMoods: string[];
   recentWeight?: number;
   recentWater?: number;
+  todaySteps?: number;
+  stepsGoal?: number;
+  lastSleepDuration?: number;
+  lastSleepQuality?: string;
+  weeklyStepsAvg?: number;
 }
 
 const SUGGESTIONS = [
@@ -29,10 +34,12 @@ const SUGGESTIONS = [
   "Why am I bloated?",
   "Why am I getting cramps?",
   "What foods help today?",
-  "Explain my cycle prediction",
-  "What should I expect this week?",
+  "How are my steps this week?",
+  "Am I drinking enough water?",
+  "How can I improve my sleep?",
   "Am I in my fertile window?",
   "How is my cycle health?",
+  "What should I expect this week?",
 ];
 
 const nowStr = () =>
@@ -136,7 +143,7 @@ const MessageBubble = ({ msg }: { msg: Message }) => {
 };
 
 export const AICoachScreen = () => {
-  const { navigate, cycleData, logs, todayWater } = useApp();
+  const { navigate, cycleData, logs, todayWater, getTodaySteps, stepsGoal, getLastSleep, stepsLogs } = useApp();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -159,6 +166,19 @@ export const AICoachScreen = () => {
     const recentWeight =
       weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : undefined;
 
+    const todaySteps = getTodaySteps();
+    const lastSleep = getLastSleep();
+
+    const last7Dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return d.toISOString().split("T")[0];
+    });
+    const weekStepsData = stepsLogs.filter(l => last7Dates.includes(l.date));
+    const weeklyStepsAvg = weekStepsData.length > 0
+      ? Math.round(weekStepsData.reduce((a, b) => a + b.steps, 0) / weekStepsData.length)
+      : undefined;
+
     return {
       phase: cycleData.phase,
       cycleDay: cycleData.currentDay,
@@ -168,8 +188,13 @@ export const AICoachScreen = () => {
       recentMoods,
       recentWeight,
       recentWater: todayWater,
+      todaySteps,
+      stepsGoal,
+      lastSleepDuration: lastSleep?.duration,
+      lastSleepQuality: lastSleep?.quality,
+      weeklyStepsAvg,
     };
-  }, [cycleData, logs, todayWater]);
+  }, [cycleData, logs, todayWater, getTodaySteps, getLastSleep, stepsLogs, stepsGoal]);
 
   // Init welcome message
   useEffect(() => {

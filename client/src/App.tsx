@@ -39,6 +39,9 @@ import {
   PaymentProgressScreen,
   CongratulationsScreen,
 } from "@/pages/PremiumScreen";
+import { WellnessStepsScreen } from "@/pages/WellnessStepsScreen";
+import { WellnessWaterScreen } from "@/pages/WellnessWaterScreen";
+import { WellnessSleepScreen } from "@/pages/WellnessSleepScreen";
 
 function AppRouter() {
   const { currentScreen } = useApp();
@@ -88,6 +91,9 @@ function AppRouter() {
     case "payment-summary": return <PaymentSummaryScreen />;
     case "payment-progress": return <PaymentProgressScreen />;
     case "congratulations": return <CongratulationsScreen />;
+    case "wellness-steps": return <WellnessStepsScreen />;
+    case "wellness-water": return <WellnessWaterScreen />;
+    case "wellness-sleep": return <WellnessSleepScreen />;
     default: return <HomeScreen />;
   }
 }

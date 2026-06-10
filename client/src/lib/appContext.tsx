@@ -44,7 +44,10 @@ export type Screen =
   | "payment-progress"
   | "congratulations"
   | "logout-confirm"
-  | "health-report";
+  | "health-report"
+  | "wellness-steps"
+  | "wellness-water"
+  | "wellness-sleep";
 
 interface CycleDay {
   date: number;
@@ -74,6 +77,23 @@ interface ProfileData {
   lastPeriodDate: string;
 }
 
+export interface StepsLog {
+  date: string;
+  steps: number;
+  source: "manual" | "health-connect";
+}
+
+export interface WaterLog {
+  date: string;
+  amount: number;
+}
+
+export interface SleepLog {
+  date: string;
+  duration: number;
+  quality: "poor" | "fair" | "good" | "excellent";
+}
+
 interface AppState {
   currentScreen: Screen;
   navigate: (screen: Screen) => void;
@@ -100,6 +120,22 @@ interface AppState {
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
   updateUserProfile: (data: ProfileData) => void;
+  stepsLogs: StepsLog[];
+  stepsGoal: number;
+  setStepsGoal: (goal: number) => void;
+  addStepsLog: (log: StepsLog) => void;
+  waterLogs: WaterLog[];
+  waterGoal: number;
+  setWaterGoal: (goal: number) => void;
+  addWaterLog: (log: WaterLog) => void;
+  sleepLogs: SleepLog[];
+  sleepGoal: number;
+  setSleepGoal: (goal: number) => void;
+  addSleepLog: (log: SleepLog) => void;
+  getTodaySteps: () => number;
+  getTodayWaterTotal: () => number;
+  getLastSleep: () => SleepLog | null;
+  getStepStreak: () => number;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -120,6 +156,43 @@ const getPhase = (day: number) => {
   return "Luteal";
 };
 
+const formatDate = (d: Date) => d.toISOString().split("T")[0];
+
+const genMockSteps = (): StepsLog[] => {
+  const logs: StepsLog[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const base = 5500 + Math.floor(Math.random() * 5000);
+    logs.push({ date: formatDate(d), steps: i === 0 ? 6432 : base, source: "manual" });
+  }
+  return logs;
+};
+
+const genMockWater = (): WaterLog[] => {
+  const logs: WaterLog[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const base = 1200 + Math.floor(Math.random() * 1800);
+    logs.push({ date: formatDate(d), amount: i === 0 ? 1540 : base });
+  }
+  return logs;
+};
+
+const genMockSleep = (): SleepLog[] => {
+  const qualities: SleepLog["quality"][] = ["poor", "fair", "good", "excellent"];
+  const logs: SleepLog[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dur = 5.5 + Math.random() * 3;
+    const q = qualities[Math.floor(Math.random() * 4)];
+    logs.push({ date: formatDate(d), duration: Math.round(dur * 2) / 2, quality: i === 0 ? "good" : q });
+  }
+  return logs;
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
   const [previousScreen, setPreviousScreen] = useState<Screen | null>(null);
@@ -136,6 +209,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cycleLengthState, setCycleLengthState] = useState(cycleLength);
   const [periodLengthState, setPeriodLengthState] = useState(5);
   const [lastPeriodState, setLastPeriodState] = useState(lastPeriod);
+
+  const [stepsLogs, setStepsLogs] = useState<StepsLog[]>(genMockSteps);
+  const [stepsGoal, setStepsGoal] = useState(10000);
+  const [waterLogs, setWaterLogs] = useState<WaterLog[]>(genMockWater);
+  const [waterGoal, setWaterGoal] = useState(3000);
+  const [sleepLogs, setSleepLogs] = useState<SleepLog[]>(genMockSleep);
+  const [sleepGoal, setSleepGoal] = useState(8);
 
   const navigate = (screen: Screen) => {
     setPreviousScreen(currentScreen);
@@ -160,6 +240,70 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (data.lastPeriodDate) {
       setLastPeriodState(new Date(data.lastPeriodDate));
     }
+  };
+
+  const addStepsLog = (log: StepsLog) => {
+    setStepsLogs(prev => {
+      const filtered = prev.filter(l => l.date !== log.date);
+      return [...filtered, log];
+    });
+  };
+
+  const addWaterLog = (log: WaterLog) => {
+    setWaterLogs(prev => {
+      const existingIdx = prev.findIndex(l => l.date === log.date);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = { ...updated[existingIdx], amount: updated[existingIdx].amount + log.amount };
+        return updated;
+      }
+      return [...prev, log];
+    });
+    const todayStr = formatDate(new Date());
+    if (log.date === todayStr) {
+      setTodayWater(prev => prev + log.amount);
+    }
+  };
+
+  const addSleepLog = (log: SleepLog) => {
+    setSleepLogs(prev => {
+      const filtered = prev.filter(l => l.date !== log.date);
+      return [...filtered, log];
+    });
+  };
+
+  const getTodaySteps = () => {
+    const todayStr = formatDate(new Date());
+    return stepsLogs.find(l => l.date === todayStr)?.steps ?? 0;
+  };
+
+  const getTodayWaterTotal = () => {
+    const todayStr = formatDate(new Date());
+    return waterLogs.find(l => l.date === todayStr)?.amount ?? todayWater;
+  };
+
+  const getLastSleep = () => {
+    if (sleepLogs.length === 0) return null;
+    const sorted = [...sleepLogs].sort((a, b) => b.date.localeCompare(a.date));
+    return sorted[0];
+  };
+
+  const getStepStreak = () => {
+    const sorted = [...stepsLogs].sort((a, b) => b.date.localeCompare(a.date));
+    let streak = 0;
+    const now = new Date();
+    for (let i = 0; i < sorted.length; i++) {
+      const expected = new Date(now);
+      expected.setDate(now.getDate() - i);
+      const expectedStr = formatDate(expected);
+      const log = sorted.find(l => l.date === expectedStr);
+      if (log && log.steps >= stepsGoal * 0.5) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
   };
 
   const computedLastPeriod = lastPeriodState;
@@ -193,6 +337,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       selectedDate,
       setSelectedDate,
       updateUserProfile,
+      stepsLogs,
+      stepsGoal,
+      setStepsGoal,
+      addStepsLog,
+      waterLogs,
+      waterGoal,
+      setWaterGoal,
+      addWaterLog,
+      sleepLogs,
+      sleepGoal,
+      setSleepGoal,
+      addSleepLog,
+      getTodaySteps,
+      getTodayWaterTotal,
+      getLastSleep,
+      getStepStreak,
     }}>
       {children}
     </AppContext.Provider>

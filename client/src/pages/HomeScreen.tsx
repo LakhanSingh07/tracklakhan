@@ -6,6 +6,86 @@ import { useApp } from "@/lib/appContext";
 import { NotificationBell } from "@/pages/NotificationCenterScreen";
 import { computeCyclePrediction } from "@/lib/cyclePrediction";
 
+const MiniRing = ({ pct, color, bg }: { pct: number; color: string; bg: string }) => {
+  const r = 11;
+  const circ = 2 * Math.PI * r;
+  return (
+    <div className="relative w-7 h-7">
+      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
+        <circle cx="14" cy="14" r={r} fill="none" stroke={bg} strokeWidth="3" />
+        <circle cx="14" cy="14" r={r} fill="none" stroke={color} strokeWidth="3"
+          strokeDasharray={`${circ * Math.min(pct, 1)} ${circ * (1 - Math.min(pct, 1))}`}
+          strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+};
+
+const WellnessCards = () => {
+  const { navigate, getTodaySteps, stepsGoal, getTodayWaterTotal, waterGoal, getLastSleep, sleepGoal } = useApp();
+  const todaySteps = getTodaySteps();
+  const todayWaterMl = getTodayWaterTotal();
+  const lastSleep = getLastSleep();
+
+  return (
+    <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100 w-full">
+      {/* Steps */}
+      <motion.button
+        whileTap={{ scale: 0.94 }}
+        onClick={() => navigate("wellness-steps")}
+        className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
+        style={{ background: "linear-gradient(135deg, #FFF7ED, #FEF3C7)" }}
+        data-testid="quick-action-steps"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-base">🚶</span>
+          <MiniRing pct={todaySteps / stepsGoal} color="#F59E0B" bg="#FDE68A" />
+        </div>
+        <div className="text-[15px] font-bold text-[#92400e] leading-none">
+          {todaySteps >= 1000 ? `${(todaySteps / 1000).toFixed(1)}k` : todaySteps.toLocaleString()}
+        </div>
+        <div className="text-[9px] text-[#B45309] font-medium">/ {(stepsGoal / 1000).toFixed(0)}k steps</div>
+      </motion.button>
+
+      {/* Water */}
+      <motion.button
+        whileTap={{ scale: 0.94 }}
+        onClick={() => navigate("wellness-water")}
+        className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
+        style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)" }}
+        data-testid="quick-action-water"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-base">💧</span>
+          <MiniRing pct={todayWaterMl / waterGoal} color="#3B82F6" bg="#BFDBFE" />
+        </div>
+        <div className="text-[15px] font-bold text-[#1e40af] leading-none">
+          {todayWaterMl >= 1000 ? `${(todayWaterMl / 1000).toFixed(1)}L` : `${todayWaterMl}ml`}
+        </div>
+        <div className="text-[9px] text-[#3B82F6] font-medium">/ {waterGoal / 1000}L goal</div>
+      </motion.button>
+
+      {/* Sleep */}
+      <motion.button
+        whileTap={{ scale: 0.94 }}
+        onClick={() => navigate("wellness-sleep")}
+        className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
+        style={{ background: "linear-gradient(135deg, #F5F0FF, #EDE9FE)" }}
+        data-testid="quick-action-sleep"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-base">😴</span>
+          <MiniRing pct={lastSleep ? lastSleep.duration / sleepGoal : 0} color="#8B5CF6" bg="#DDD6FE" />
+        </div>
+        <div className="text-[15px] font-bold text-[#5b21b6] leading-none">
+          {lastSleep ? `${lastSleep.duration}h` : "--"}
+        </div>
+        <div className="text-[9px] text-[#7C3AED] font-medium">/ {sleepGoal}h goal</div>
+      </motion.button>
+    </div>
+  );
+};
+
 const PHASE_MAP: Record<number, string> = {};
 for (let d = 1; d <= 5; d++) PHASE_MAP[d] = "menstruation";
 for (let d = 6; d <= 9; d++) PHASE_MAP[d] = "lowFertility";
@@ -475,77 +555,8 @@ export const HomeScreen = () => {
                 periodLength={cycleData.periodLength}
                 cycleLength={cycleData.cycleLength}
               />
-              {/* Wellness Quick Actions */}
-              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100 w-full">
-                {/* Steps */}
-                <motion.button
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => navigate("log-entry")}
-                  className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
-                  style={{ background: "linear-gradient(135deg, #FFF7ED, #FEF3C7)" }}
-                  data-testid="quick-action-steps"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-base">🚶</span>
-                    <div className="relative w-7 h-7">
-                      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="#FDE68A" strokeWidth="3" />
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="#F59E0B" strokeWidth="3"
-                          strokeDasharray={`${2 * Math.PI * 11 * 0.64} ${2 * Math.PI * 11 * 0.36}`}
-                          strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="text-[15px] font-bold text-[#92400e] leading-none">6,432</div>
-                  <div className="text-[9px] text-[#B45309] font-medium">/ 10,000 steps</div>
-                </motion.button>
-
-                {/* Water */}
-                <motion.button
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => navigate("log-entry")}
-                  className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
-                  style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)" }}
-                  data-testid="quick-action-water"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-base">💧</span>
-                    <div className="relative w-7 h-7">
-                      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="#BFDBFE" strokeWidth="3" />
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="#3B82F6" strokeWidth="3"
-                          strokeDasharray={`${2 * Math.PI * 11 * 0.6} ${2 * Math.PI * 11 * 0.4}`}
-                          strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="text-[15px] font-bold text-[#1e40af] leading-none">1.8L</div>
-                  <div className="text-[9px] text-[#3B82F6] font-medium">/ 3L goal</div>
-                </motion.button>
-
-                {/* Sleep */}
-                <motion.button
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => navigate("log-entry")}
-                  className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
-                  style={{ background: "linear-gradient(135deg, #F5F0FF, #EDE9FE)" }}
-                  data-testid="quick-action-sleep"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-base">😴</span>
-                    <div className="relative w-7 h-7">
-                      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="#DDD6FE" strokeWidth="3" />
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="#8B5CF6" strokeWidth="3"
-                          strokeDasharray={`${2 * Math.PI * 11 * 0.9} ${2 * Math.PI * 11 * 0.1}`}
-                          strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="text-[15px] font-bold text-[#5b21b6] leading-none">7h 15m</div>
-                  <div className="text-[9px] text-[#7C3AED] font-medium">/ 8h goal</div>
-                </motion.button>
-              </div>
+              {/* Wellness Cards */}
+              <WellnessCards />
             </motion.div>
           </div>
 
