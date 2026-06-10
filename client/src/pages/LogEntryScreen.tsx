@@ -171,7 +171,7 @@ export const LogEntryScreen = () => {
             {[
               { label: "Weight", icon: "⚖️", screen: "log-weight" as const, color: "#60A5FA" },
               { label: "Temperature", icon: "🌡️", screen: "log-temperature" as const, color: "#F59E0B" },
-              { label: "Water", icon: "💧", screen: "log-water" as const, color: "#34D399" },
+              { label: "Water", icon: "💧", screen: "wellness-water" as const, color: "#34D399" },
             ].map(item => (
               <motion.button
                 key={item.label}

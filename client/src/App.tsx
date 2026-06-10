@@ -66,7 +66,7 @@ function AppRouter() {
     case "log-mood": return <LogMoodScreen />;
     case "log-weight": return <LogWeightScreen />;
     case "log-temperature": return <LogTemperatureScreen />;
-    case "log-water": return <LogWaterScreen />;
+    case "log-water": return <WellnessWaterScreen />;
     case "tracker": return <TrackerScreen />;
     case "cycles": return <MyCyclesScreen />;
     case "health-bar": return <HealthBarScreen />;
