@@ -224,90 +224,69 @@ const SmartCycleDial = ({
           <AnimatePresence mode="wait">
             <motion.g
               key={activeDay}
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.94 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.18 }}
               style={{ transformOrigin: `${CX}px ${CY}px` }}
             >
+              {/* L2 — Phase label */}
               <text
-                x={CX} y={CY - 30}
+                x={CX} y={CY - 32}
                 textAnchor="middle"
+                dominantBaseline="central"
                 fill={activeStyle.bg}
-                fontSize={8.5}
-                fontWeight="700"
-                letterSpacing="1.8"
-                style={{ fontFamily: "Instrument Sans, sans-serif", textTransform: "uppercase" }}
+                fontSize={12}
+                fontWeight="600"
+                letterSpacing="1.4"
+                style={{ fontFamily: "Instrument Sans, sans-serif" }}
               >
                 {activeStyle.label.toUpperCase()}
               </text>
 
+              {/* L1 — Day number (dominant) */}
               <text
-                x={CX} y={CY + 6}
+                x={CX} y={CY + 4}
                 textAnchor="middle"
-                fill="#1a1a2e"
-                fontSize={46}
+                dominantBaseline="central"
+                fill="#111827"
+                fontSize={52}
                 fontWeight="800"
                 style={{ fontFamily: "Instrument Sans, sans-serif" }}
               >
                 {activeDay}
               </text>
 
-              <text
-                x={CX} y={CY + 22}
-                textAnchor="middle"
-                fill="#94a3b8"
-                fontSize={9}
-                style={{ fontFamily: "Instrument Sans, sans-serif" }}
-              >
-                of {TOTAL} days
-              </text>
-
-              <line x1={CX - 28} y1={CY + 32} x2={CX + 28} y2={CY + 32} stroke="#e2e8f0" strokeWidth={0.8} />
-
+              {/* L3 — Period status */}
               {isOnPeriod ? (
                 <motion.g
-                  animate={{ scale: [1, 1.04, 1] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-                  style={{ transformOrigin: `${CX}px ${CY + 52}px` }}
+                  animate={{ opacity: [0.85, 1, 0.85] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   <text
-                    x={CX} y={CY + 50}
+                    x={CX} y={CY + 42}
                     textAnchor="middle"
+                    dominantBaseline="central"
                     fill="#FF6B8A"
-                    fontSize={11.5}
-                    fontWeight="700"
+                    fontSize={12}
+                    fontWeight="600"
                     style={{ fontFamily: "Instrument Sans, sans-serif" }}
                   >
-                    Period active
-                  </text>
-                  <text x={CX} y={CY + 64} textAnchor="middle" fill="#FF6B8A" fontSize={10} style={{ fontFamily: "Instrument Sans, sans-serif" }}>
-                    {periodLength - currentDay + 1}d remaining
+                    🩸 {periodLength - currentDay + 1}d remaining
                   </text>
                 </motion.g>
               ) : (
-                <>
-                  <text
-                    x={CX} y={CY + 50}
-                    textAnchor="middle"
-                    fill="#FF6B8A"
-                    fontSize={daysUntilNextPeriod >= 10 ? 28 : 32}
-                    fontWeight="800"
-                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
-                  >
-                    {daysUntilNextPeriod}
-                  </text>
-                  <text
-                    x={CX} y={CY + 66}
-                    textAnchor="middle"
-                    fill="#94a3b8"
-                    fontSize={8.5}
-                    letterSpacing={0.4}
-                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
-                  >
-                    days to period
-                  </text>
-                </>
+                <text
+                  x={CX} y={CY + 42}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill="#94a3b8"
+                  fontSize={12}
+                  fontWeight="500"
+                  style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                >
+                  {daysUntilNextPeriod}d to period
+                </text>
               )}
             </motion.g>
           </AnimatePresence>
@@ -496,22 +475,76 @@ export const HomeScreen = () => {
                 periodLength={cycleData.periodLength}
                 cycleLength={cycleData.cycleLength}
               />
-              {/* Fertile + ovulation */}
-              <div className="flex gap-5 mt-4 pt-4 border-t border-gray-100 w-full justify-center">
-                <div className="text-center">
-                  <div className="text-[11px] text-gray-400 font-medium">Fertile Window</div>
-                  <div className="text-[14px] font-bold text-[#8B5CF6]">Mar 12–16</div>
-                </div>
-                <div className="w-px bg-gray-100" />
-                <div className="text-center">
-                  <div className="text-[11px] text-gray-400 font-medium">Ovulation</div>
-                  <div className="text-[14px] font-bold text-[#60A5FA]">Mar 14</div>
-                </div>
-                <div className="w-px bg-gray-100" />
-                <div className="text-center">
-                  <div className="text-[11px] text-gray-400 font-medium">Wellness</div>
-                  <div className="text-[14px] font-bold text-[#34D399]">78/100</div>
-                </div>
+              {/* Wellness Quick Actions */}
+              <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100 w-full">
+                {/* Steps */}
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => navigate("log-entry")}
+                  className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
+                  style={{ background: "linear-gradient(135deg, #FFF7ED, #FEF3C7)" }}
+                  data-testid="quick-action-steps"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-base">🚶</span>
+                    <div className="relative w-7 h-7">
+                      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
+                        <circle cx="14" cy="14" r="11" fill="none" stroke="#FDE68A" strokeWidth="3" />
+                        <circle cx="14" cy="14" r="11" fill="none" stroke="#F59E0B" strokeWidth="3"
+                          strokeDasharray={`${2 * Math.PI * 11 * 0.64} ${2 * Math.PI * 11 * 0.36}`}
+                          strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="text-[15px] font-bold text-[#92400e] leading-none">6,432</div>
+                  <div className="text-[9px] text-[#B45309] font-medium">/ 10,000 steps</div>
+                </motion.button>
+
+                {/* Water */}
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => navigate("log-entry")}
+                  className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
+                  style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)" }}
+                  data-testid="quick-action-water"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-base">💧</span>
+                    <div className="relative w-7 h-7">
+                      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
+                        <circle cx="14" cy="14" r="11" fill="none" stroke="#BFDBFE" strokeWidth="3" />
+                        <circle cx="14" cy="14" r="11" fill="none" stroke="#3B82F6" strokeWidth="3"
+                          strokeDasharray={`${2 * Math.PI * 11 * 0.6} ${2 * Math.PI * 11 * 0.4}`}
+                          strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="text-[15px] font-bold text-[#1e40af] leading-none">1.8L</div>
+                  <div className="text-[9px] text-[#3B82F6] font-medium">/ 3L goal</div>
+                </motion.button>
+
+                {/* Sleep */}
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => navigate("log-entry")}
+                  className="flex-1 rounded-2xl p-3 flex flex-col gap-1.5 text-left"
+                  style={{ background: "linear-gradient(135deg, #F5F0FF, #EDE9FE)" }}
+                  data-testid="quick-action-sleep"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-base">😴</span>
+                    <div className="relative w-7 h-7">
+                      <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
+                        <circle cx="14" cy="14" r="11" fill="none" stroke="#DDD6FE" strokeWidth="3" />
+                        <circle cx="14" cy="14" r="11" fill="none" stroke="#8B5CF6" strokeWidth="3"
+                          strokeDasharray={`${2 * Math.PI * 11 * 0.9} ${2 * Math.PI * 11 * 0.1}`}
+                          strokeLinecap="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="text-[15px] font-bold text-[#5b21b6] leading-none">7h 15m</div>
+                  <div className="text-[9px] text-[#7C3AED] font-medium">/ 8h goal</div>
+                </motion.button>
               </div>
             </motion.div>
           </div>

@@ -1,0 +1,283 @@
+Redesign the Cycle Wheel card in FlowAI using proper mobile UX hierarchy and add a complete wellness ecosystem (Steps, Water, Sleep).
+
+GOAL:
+
+The cycle wheel should communicate the user's current cycle status within 1 second and provide wellness actions directly underneath.
+
+---
+
+## PART 1 — FIX CYCLE WHEEL TYPOGRAPHY
+
+Current issue:
+The center content is overcrowded and multiple text elements compete for attention.
+
+Redesign the center area.
+
+NEW HIERARCHY:
+
+Level 1 (Largest)
+Day 15
+
+Font:
+36-42px
+Bold
+
+Level 2
+Fertile Window
+
+Font:
+14-16px
+Medium
+
+Color:
+Brand Pink
+
+Level 3
+16 Days Until Period
+
+Font:
+14px
+Regular
+
+Color:
+Secondary Gray
+
+Remove:
+
+* "of 30 days"
+* Excess separators
+* Unnecessary labels
+
+The user should instantly understand:
+
+Current Day
+Current Phase
+Next Major Event
+
+Nothing else.
+
+---
+
+## PART 2 — WELLNESS QUICK ACTIONS
+
+Replace the current section below the wheel with 3 large wellness cards.
+
+Card 1
+🚶 Steps
+
+Show:
+Current Steps
+Goal
+Progress Ring
+
+Example:
+6,432 / 10,000
+
+Tap:
+Open Steps Dashboard
+
+Card 2
+💧 Water
+
+Show:
+Current Water Intake
+Goal
+
+Example:
+1.8L / 3L
+
+Tap:
+Quick Add Water
+
+Card 3
+😴 Sleep
+
+Show:
+Last Night Sleep
+Goal
+
+Example:
+7h 15m / 8h
+
+Tap:
+Open Sleep Dashboard
+
+Layout:
+Horizontal cards
+Scrollable
+Premium Apple Health style
+
+---
+
+## PART 3 — STEPS MODULE
+
+Create complete Steps Architecture.
+
+Dashboard:
+
+1. Today's Steps
+
+2. Weekly Steps Chart
+
+3. Monthly Trend
+
+4. Activity Score
+
+5. Calories Burned Estimate
+
+6. Goal Completion %
+
+7. Cycle Correlation
+
+Examples:
+
+"Users typically walk less during period days."
+
+"Activity increases during follicular phase."
+
+Data:
+
+steps_logs
+daily_steps
+weekly_steps
+
+Support:
+
+Apple Health
+Google Fit
+Manual Entry
+
+---
+
+## PART 4 — WATER MODULE
+
+Create complete Hydration Architecture.
+
+Dashboard:
+
+1. Today's Intake
+
+2. Quick Add Buttons
+
+250ml
+500ml
+750ml
+
+3. Custom Add
+
+4. Daily Goal
+
+5. Weekly Hydration Trend
+
+6. Hydration Score
+
+7. AI Insights
+
+Examples:
+
+"You drink 20% less water before periods."
+
+"Better hydration correlates with lower cramp severity."
+
+Database:
+
+water_logs
+
+Fields:
+
+date
+amount_ml
+source
+
+---
+
+## PART 5 — SLEEP MODULE
+
+Create complete Sleep Architecture.
+
+Dashboard:
+
+1. Last Night Sleep
+
+2. Sleep Duration
+
+3. Sleep Quality
+
+4. Weekly Sleep Graph
+
+5. Monthly Sleep Trends
+
+6. Sleep Score
+
+7. Sleep vs Symptoms Analysis
+
+AI Insights:
+
+"Poor sleep appears before high-cramp cycles."
+
+"Your mood improves after 8+ hours sleep."
+
+Database:
+
+sleep_logs
+
+Fields:
+
+bed_time
+wake_time
+duration
+quality
+
+---
+
+## PART 6 — WELLNESS SCORE ENGINE
+
+Create a unified wellness score.
+
+Components:
+
+Sleep = 35%
+Water = 25%
+Activity = 25%
+Mood = 15%
+
+Output:
+
+0-100 Wellness Score
+
+Levels:
+
+90-100 Excellent
+
+75-89 Good
+
+60-74 Average
+
+Below 60 Needs Attention
+
+Display score prominently on Home Screen.
+
+---
+
+## PART 7 — AI HEALTH INSIGHTS
+
+Generate personalized insights using:
+
+Cycle Data
+Steps
+Water
+Sleep
+Mood
+Symptoms
+
+Examples:
+
+"Hydration is lower than usual this week."
+
+"Sleep quality improved by 12%."
+
+"Activity levels are highest during ovulation."
+
+Show insights as cards throughout the app.
+
+Design everything using premium health-app standards similar to Apple Health, Oura, and Flo while maintaining the FlowAI visual identity.
