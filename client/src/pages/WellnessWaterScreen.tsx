@@ -11,6 +11,30 @@ const QUICK_ADD = [
   { label: "1000 ml", value: 1000, icon: "🧴" },
 ];
 
+const CUP_SIZES = [200, 250, 300, 350, 500];
+
+const CupIcon = ({ selected }: { selected: boolean }) => (
+  <div className="flex flex-col items-center justify-end" style={{ width: 32, height: 38 }}>
+    <div
+      className="relative rounded-b-lg rounded-t-sm"
+      style={{
+        width: 24, height: 30,
+        background: selected
+          ? "linear-gradient(160deg, #f9a8d4 0%, #ec4899 100%)"
+          : "linear-gradient(160deg, #fda4af 0%, #fb7185 80%)",
+        boxShadow: selected ? "0 2px 8px rgba(236,72,153,0.35)" : "none",
+      }}
+    >
+      <div className="absolute top-1 left-1/2 -translate-x-1/2 w-[3px] h-[8px] rounded-full bg-white/60" />
+      <div className="absolute bottom-0 left-0 right-0 h-[10px] rounded-b-lg" style={{ background: "rgba(255,255,255,0.18)" }} />
+      <div
+        className="absolute -top-[5px] left-1/2 -translate-x-1/2 w-[10px] h-[6px] rounded-t-sm"
+        style={{ background: selected ? "#ec4899" : "#fb7185", borderBottom: "none" }}
+      />
+    </div>
+  </div>
+);
+
 const HydrationRing = ({ current, goal }: { current: number; goal: number }) => {
   const pct = Math.min(current / goal, 1);
   const size = 200;
@@ -60,9 +84,149 @@ const HydrationRing = ({ current, goal }: { current: number; goal: number }) => 
   );
 };
 
+const WaterCustomModal = ({
+  todayTotal,
+  waterGoal,
+  onAdd,
+  onRemove,
+  onClose,
+}: {
+  todayTotal: number;
+  waterGoal: number;
+  onAdd: (ml: number) => void;
+  onRemove: (ml: number) => void;
+  onClose: () => void;
+}) => {
+  const [selectedSize, setSelectedSize] = useState(250);
+  const pillCount = 10;
+  const filledPills = Math.round(Math.min(todayTotal / waterGoal, 1) * pillCount);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 bg-black/40 flex items-end z-50"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 420 }}
+        animate={{ y: 0 }}
+        exit={{ y: 420 }}
+        transition={{ type: "spring", damping: 28, stiffness: 280 }}
+        onClick={e => e.stopPropagation()}
+        className="w-full rounded-t-3xl px-5 pt-5 pb-6"
+        style={{ background: "#E8F9F6" }}
+      >
+        {/* Handle */}
+        <div className="w-10 h-1 bg-gray-300/70 rounded-full mx-auto mb-4" />
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl px-5 py-5 shadow-sm mb-4">
+          {/* Drop + amount */}
+          <div className="flex flex-col items-center mb-1">
+            <span style={{ fontSize: 36 }}>💧</span>
+            <div className="flex items-end gap-1 mt-1">
+              <motion.span
+                key={todayTotal}
+                initial={{ scale: 1.15, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="font-bold leading-none"
+                style={{ fontSize: 52, color: "#34D399", fontFamily: "Instrument Sans, sans-serif" }}
+              >
+                {todayTotal}
+              </motion.span>
+              <span className="text-[20px] font-semibold text-gray-400 mb-2">ml</span>
+            </div>
+            <span className="text-[13px] text-gray-400 font-medium mt-0.5">Goal: {waterGoal}ml</span>
+          </div>
+
+          {/* Pill progress bar */}
+          <div className="flex gap-[5px] justify-center mt-3 mb-4">
+            {Array.from({ length: pillCount }).map((_, i) => (
+              <motion.div
+                key={i}
+                className="rounded-full"
+                style={{
+                  width: 28, height: 38,
+                  background: i < filledPills
+                    ? "linear-gradient(180deg, #6EE7B7 0%, #34D399 100%)"
+                    : "#E5E7EB",
+                }}
+                initial={{ scaleY: 0.6, opacity: 0 }}
+                animate={{ scaleY: 1, opacity: 1 }}
+                transition={{ delay: i * 0.04, duration: 0.3 }}
+              />
+            ))}
+          </div>
+
+          {/* Cup size selector */}
+          <p className="text-[13px] font-bold text-gray-800 mb-3">Select Cup Size</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {CUP_SIZES.map(size => (
+              <motion.button
+                key={size}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setSelectedSize(size)}
+                className="flex flex-col items-center gap-1 rounded-2xl py-3"
+                style={{
+                  width: 70,
+                  border: selectedSize === size ? "2px solid #34D399" : "2px solid #E5E7EB",
+                  background: selectedSize === size ? "#F0FDF9" : "white",
+                }}
+                data-testid={`button-cup-${size}ml`}
+              >
+                <CupIcon selected={selectedSize === size} />
+                <span
+                  className="text-[11px] font-bold"
+                  style={{ color: selectedSize === size ? "#059669" : "#6B7280" }}
+                >
+                  {size}ml
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        {/* Remove / Add buttons */}
+        <div className="flex gap-3 mb-3">
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={() => onRemove(selectedSize)}
+            className="flex-1 py-4 rounded-2xl font-bold text-[15px] border-2"
+            style={{ borderColor: "#34D399", color: "#059669", background: "white" }}
+            data-testid="button-remove-water"
+          >
+            – Remove
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={() => onAdd(selectedSize)}
+            className="flex-1 py-4 rounded-2xl font-bold text-[15px] text-white"
+            style={{ background: "linear-gradient(135deg, #6EE7B7, #34D399)" }}
+            data-testid="button-add-custom-water"
+          >
+            + Add {selectedSize}ml
+          </motion.button>
+        </div>
+
+        {/* Done */}
+        <button
+          onClick={onClose}
+          className="w-full text-center text-[14px] font-semibold text-gray-400 py-1"
+          data-testid="button-custom-done"
+        >
+          Done
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 export const WellnessWaterScreen = () => {
   const { navigate, waterLogs, waterGoal, setWaterGoal, addWaterLog } = useApp();
   const [showGoalEdit, setShowGoalEdit] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
   const [goalInput, setGoalInput] = useState(String(waterGoal));
   const [lastAdded, setLastAdded] = useState<number | null>(null);
 
@@ -73,6 +237,20 @@ export const WellnessWaterScreen = () => {
     addWaterLog({ date: todayStr, amount: ml });
     setLastAdded(ml);
     setTimeout(() => setLastAdded(null), 2000);
+  };
+
+  const handleCustomAdd = (ml: number) => {
+    addWaterLog({ date: todayStr, amount: ml });
+    setLastAdded(ml);
+    setTimeout(() => setLastAdded(null), 2000);
+  };
+
+  const handleCustomRemove = (ml: number) => {
+    if (todayTotal >= ml) {
+      addWaterLog({ date: todayStr, amount: -ml });
+      setLastAdded(-ml);
+      setTimeout(() => setLastAdded(null), 2000);
+    }
   };
 
   const last7 = useMemo(() => {
@@ -149,9 +327,9 @@ export const WellnessWaterScreen = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   className="mt-2 px-4 py-1.5 rounded-full text-white text-[12px] font-bold shadow"
-                  style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)" }}
+                  style={{ background: lastAdded > 0 ? "linear-gradient(135deg, #3B82F6, #1D4ED8)" : "linear-gradient(135deg, #F87171, #EF4444)" }}
                 >
-                  +{lastAdded}ml added 💧
+                  {lastAdded > 0 ? `+${lastAdded}ml added 💧` : `${lastAdded}ml removed`}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -165,7 +343,7 @@ export const WellnessWaterScreen = () => {
           {/* Quick add */}
           <div className="px-5 mb-5">
             <h2 className="text-[14px] font-bold text-gray-800 mb-3">Quick Add</h2>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2 mb-2">
               {QUICK_ADD.map(item => (
                 <motion.button
                   key={item.value}
@@ -180,6 +358,21 @@ export const WellnessWaterScreen = () => {
                 </motion.button>
               ))}
             </div>
+            {/* Custom Add button */}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowCustom(true)}
+              className="w-full py-3 rounded-2xl font-bold text-[13px] flex items-center justify-center gap-2 border-2"
+              style={{
+                borderColor: "#34D399",
+                background: "linear-gradient(135deg, #F0FDF9, #DCFCE7)",
+                color: "#059669",
+              }}
+              data-testid="button-custom-add"
+            >
+              <span className="text-lg">🥤</span>
+              Custom Add / Remove
+            </motion.button>
           </div>
 
           {/* Stats row */}
@@ -262,6 +455,19 @@ export const WellnessWaterScreen = () => {
             </div>
           </div>
         </div>
+
+        {/* Custom add/remove modal */}
+        <AnimatePresence>
+          {showCustom && (
+            <WaterCustomModal
+              todayTotal={todayTotal}
+              waterGoal={waterGoal}
+              onAdd={handleCustomAdd}
+              onRemove={handleCustomRemove}
+              onClose={() => setShowCustom(false)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Goal edit modal */}
         <AnimatePresence>
