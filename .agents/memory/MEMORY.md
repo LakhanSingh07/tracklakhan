@@ -1,0 +1,1 @@
+- [OpenRouter free models](openrouter-free-models.md) — which free model slugs actually have endpoints vs 404; use multi-model fallback

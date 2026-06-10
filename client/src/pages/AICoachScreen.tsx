@@ -1,54 +1,61 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
 import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
+import { Mic, MicOff, Send, RotateCcw, Sparkles } from "lucide-react";
 
 interface Message {
   id: string;
   role: "user" | "ai";
   text: string;
   time: string;
+  streaming?: boolean;
 }
 
-const AI_RESPONSES: Record<string, string> = {
-  "Why is my period late?": "Based on your cycle history, your period is currently **2 days late**, which is within normal range (±3 days). Common causes include stress, changes in sleep, travel, or slight hormonal fluctuations. Your average cycle is 28 days. If it's delayed beyond 7 days, I'd recommend a pregnancy test or consulting your doctor. 🌸",
-  "What should I eat today?": "You're in your **Menstrual Phase** right now. I recommend:\n\n🥬 **Iron-rich foods** — spinach, lentils, red meat to replenish iron lost during bleeding\n🍫 **Dark chocolate** — magnesium helps reduce cramps\n🫚 **Omega-3s** — salmon, walnuts reduce inflammation\n💧 **Stay hydrated** — at least 8 glasses of water\n\nAvoid caffeine and salty foods as they can worsen bloating! 🌷",
-  "Why are my cramps worse?": "Cramps during menstruation are caused by **prostaglandins** — hormone-like substances that trigger uterine contractions. Factors that may worsen them:\n\n• High stress levels 😟\n• Low magnesium/calcium\n• Sedentary lifestyle\n• Endometriosis (if severe)\n\n**Try:** Heat pad on abdomen, gentle yoga, ibuprofen if needed, or magnesium supplements. If pain is severe and disrupting daily life, please see a gynecologist. 💗",
-  "What does spotting mean?": "Spotting (light bleeding outside your period) can have several causes:\n\n🟡 **Ovulation spotting** — normal mid-cycle spotting\n🟠 **Implantation bleeding** — if trying to conceive, ~6-12 days after ovulation\n🔴 **Hormonal fluctuations** — common with birth control\n⚠️ **Worth checking** — if spotting is heavy, painful, or frequent\n\nYour cycle data shows you're on Day 14, which aligns with ovulation timing. Likely normal! 🌸",
-  "Am I in my fertile window?": "Based on your cycle data:\n\n📅 **Fertile Window: Mar 12–16**\n🥚 **Ovulation Day: Mar 14** (predicted)\n\nYou are currently in your **fertile window** with HIGH conception chances. Your estrogen is peaking which also means you'll feel more energetic and sociable!\n\n💡 Tip: Track your basal body temperature (BBT) and cervical mucus to confirm ovulation more precisely. 🌺",
-  "How is my cycle health?": "Your cycle health looks **great** overall! 🎉\n\n✅ **Cycle length:** 28 days (textbook regular!)\n✅ **Period duration:** 5 days (normal range)\n✅ **Mood tracking:** Consistent\n⚠️ **Water intake:** Could be higher\n⚠️ **Sleep quality:** Not logged recently\n\n**Wellness Score: 78/100** — Keep logging daily for better insights! Your next predicted period is in **14 days**. 💗",
-};
+interface HealthContext {
+  phase: string;
+  cycleDay: number;
+  daysUntilPeriod: number;
+  cycleLength: number;
+  periodLength: number;
+  recentMoods: string[];
+  recentWeight?: number;
+  recentWater?: number;
+}
 
 const SUGGESTIONS = [
   "Why is my period late?",
-  "What should I eat today?",
+  "Why am I bloated?",
+  "Why am I getting cramps?",
+  "What foods help today?",
+  "Explain my cycle prediction",
+  "What should I expect this week?",
   "Am I in my fertile window?",
-  "Why are my cramps worse?",
-  "What does spotting mean?",
   "How is my cycle health?",
 ];
 
-const now = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+const nowStr = () =>
+  new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-const initMessages: Message[] = [
-  {
-    id: "welcome",
-    role: "ai",
-    text: "Hi! 👋 I'm **FlowAI Coach**, your personal hormonal health assistant.\n\nI can help you understand your cycle, symptoms, fertility, and more — all based on your personal health data.\n\nWhat would you like to know today? 🌸",
-    time: now(),
-  },
-];
+const makeWelcome = (phase: string, day: number): Message => ({
+  id: "welcome",
+  role: "ai",
+  text: `Hi! 👋 I'm **FlowAI Coach**, your personal hormonal health assistant.\n\nYou're on **Day ${day}** of your cycle — currently in your **${phase} Phase**. I can see your health data and give you personalised insights.\n\nWhat would you like to know today? 🌸`,
+  time: nowStr(),
+});
 
 const TypingIndicator = () => (
   <div className="flex items-end gap-2 px-4">
-    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm"
-      style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
+    <div
+      className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm shadow-sm"
+      style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}
+    >
       ✨
     </div>
     <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-white shadow-sm border border-gray-100">
       <div className="flex gap-1 items-center h-5">
-        {[0, 1, 2].map(i => (
+        {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
             className="w-2 h-2 rounded-full bg-purple-400"
@@ -63,25 +70,32 @@ const TypingIndicator = () => (
 
 const MessageBubble = ({ msg }: { msg: Message }) => {
   const isAI = msg.role === "ai";
+
   const renderText = (text: string) => {
     return text.split("\n").map((line, i) => {
-      const bold = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const withBold = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
       return (
-        <p key={i} className={i > 0 ? "mt-1" : ""} dangerouslySetInnerHTML={{ __html: bold }} />
+        <p
+          key={i}
+          className={i > 0 ? "mt-1" : ""}
+          dangerouslySetInnerHTML={{ __html: withBold }}
+        />
       );
     });
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.96 }}
+      initial={{ opacity: 0, y: 10, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       className={`flex items-end gap-2 px-4 ${isAI ? "" : "flex-row-reverse"}`}
     >
       {isAI && (
-        <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm shadow-sm"
-          style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
+        <div
+          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm shadow-sm"
+          style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}
+        >
           ✨
         </div>
       )}
@@ -91,15 +105,30 @@ const MessageBubble = ({ msg }: { msg: Message }) => {
             ? "rounded-bl-md bg-white border border-gray-100 text-gray-800"
             : "rounded-br-md text-white"
         }`}
-        style={!isAI ? { background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)" } : {}}
+        style={
+          !isAI
+            ? { background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)" }
+            : {}
+        }
       >
         {renderText(msg.text)}
-        <p className={`text-[10px] mt-1.5 ${isAI ? "text-gray-400" : "text-white/60"}`}>{msg.time}</p>
+        {msg.streaming && (
+          <motion.span
+            animate={{ opacity: [1, 0] }}
+            transition={{ duration: 0.5, repeat: Infinity }}
+            className="inline-block w-0.5 h-4 bg-purple-400 ml-0.5 align-text-bottom"
+          />
+        )}
+        <p className={`text-[10px] mt-1.5 ${isAI ? "text-gray-400" : "text-white/60"}`}>
+          {msg.time}
+        </p>
       </div>
       {!isAI && (
-        <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
-          style={{ background: "linear-gradient(135deg, #EC4899, #8B5CF6)" }}>
-          S
+        <div
+          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
+          style={{ background: "linear-gradient(135deg, #EC4899, #8B5CF6)" }}
+        >
+          U
         </div>
       )}
     </motion.div>
@@ -107,34 +136,219 @@ const MessageBubble = ({ msg }: { msg: Message }) => {
 };
 
 export const AICoachScreen = () => {
-  const { navigate } = useApp();
-  const [messages, setMessages] = useState<Message[]>(initMessages);
+  const { navigate, cycleData, logs, todayWater } = useApp();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [showTyping, setShowTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [isListening, setIsListening] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const historyRef = useRef<{ role: string; content: string }[]>([]);
+  const recognitionRef = useRef<any>(null);
+
+  // Build health context from app state
+  const getContext = useCallback((): HealthContext => {
+    const recentMoods = logs
+      .slice(-5)
+      .filter((l) => l.mood)
+      .map((l) => l.mood as string);
+    const weightLogs = logs.filter((l) => l.weight);
+    const recentWeight =
+      weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : undefined;
+
+    return {
+      phase: cycleData.phase,
+      cycleDay: cycleData.currentDay,
+      daysUntilPeriod: cycleData.daysUntilNextPeriod,
+      cycleLength: cycleData.cycleLength,
+      periodLength: cycleData.periodLength,
+      recentMoods,
+      recentWeight,
+      recentWater: todayWater,
+    };
+  }, [cycleData, logs, todayWater]);
+
+  // Init welcome message
+  useEffect(() => {
+    setMessages([makeWelcome(cycleData.phase, cycleData.currentDay)]);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typing]);
+  }, [messages, showTyping]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: Message = { id: Date.now().toString(), role: "user", text: text.trim(), time: now() };
-    setMessages(prev => [...prev, userMsg]);
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isStreaming) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      text: text.trim(),
+      time: nowStr(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setTyping(true);
     setShowSuggestions(false);
+    setShowTyping(true);
+    setIsStreaming(true);
+    setUsageCount((c) => c + 1);
 
-    const delay = 1200 + Math.random() * 800;
-    setTimeout(() => {
-      setTyping(false);
-      const responseText = AI_RESPONSES[text.trim()] ||
-        "That's a great question! Based on your cycle data and logged symptoms, I can see patterns that might help answer this. For personalized medical advice about this specific concern, I'd recommend consulting with your gynecologist — but I'm here to help you understand your body better! 🌸\n\nWould you like to explore any specific aspect of your cycle health?";
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: "ai", text: responseText, time: now() };
-      setMessages(prev => [...prev, aiMsg]);
-    }, delay);
+    // Build history for context (last 10 messages)
+    const history = historyRef.current.slice(-10);
+
+    const aiId = (Date.now() + 1).toString();
+    let accumulated = "";
+
+    try {
+      abortRef.current = new AbortController();
+
+      const res = await fetch("/api/ai-coach/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text.trim(),
+          history,
+          context: getContext(),
+        }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!res.ok) throw new Error("Network error");
+
+      setShowTyping(false);
+
+      // Add empty AI message to fill in via streaming
+      setMessages((prev) => [
+        ...prev,
+        { id: aiId, role: "ai", text: "", time: nowStr(), streaming: true },
+      ]);
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      if (!reader) throw new Error("No response body");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(line.slice(6));
+            if (json.content) {
+              accumulated += json.content;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiId ? { ...m, text: accumulated, streaming: true } : m
+                )
+              );
+            }
+            if (json.error) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiId
+                    ? { ...m, text: json.error, streaming: false }
+                    : m
+                )
+              );
+            } else if (json.done) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiId ? { ...m, streaming: false } : m
+                )
+              );
+            }
+          } catch {
+            // ignore parse errors
+          }
+        }
+      }
+
+      // Save to history
+      historyRef.current.push(
+        { role: "user", content: text.trim() },
+        { role: "assistant", content: accumulated }
+      );
+    } catch (err: any) {
+      if (err.name === "AbortError") return;
+      setShowTyping(false);
+      const errMsg: Message = {
+        id: aiId,
+        role: "ai",
+        text: "I'm having trouble connecting right now. Please try again in a moment. 🌸",
+        time: nowStr(),
+        streaming: false,
+      };
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== aiId).concat(errMsg)
+      );
+    } finally {
+      setIsStreaming(false);
+      setShowTyping(false);
+    }
   };
+
+  const handleReset = () => {
+    abortRef.current?.abort();
+    historyRef.current = [];
+    setMessages([makeWelcome(cycleData.phase, cycleData.currentDay)]);
+    setShowSuggestions(true);
+    setIsStreaming(false);
+    setShowTyping(false);
+  };
+
+  const toggleVoice = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice input isn't supported in your browser. Try Chrome.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((r: any) => r[0].transcript)
+        .join("");
+      setInput(transcript);
+    };
+
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  const phaseColor: Record<string, string> = {
+    Menstrual: "#FF657D",
+    Follicular: "#FB923C",
+    Ovulation: "#8B5CF6",
+    Luteal: "#60A5FA",
+  };
+  const accent = phaseColor[cycleData.phase] || "#8B5CF6";
 
   return (
     <MobileLayout gradient="linear-gradient(180deg, #FAF5FF 0%, #FDF2F8 50%, #FFF0F4 100%)">
@@ -142,15 +356,21 @@ export const AICoachScreen = () => {
         <StatusBar />
 
         {/* Header */}
-        <div className="flex-shrink-0" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #C026D3 50%, #EC4899 100%)" }}>
+        <div
+          className="flex-shrink-0"
+          style={{
+            background: "linear-gradient(135deg, #8B5CF6 0%, #C026D3 50%, #EC4899 100%)",
+          }}
+        >
           <div className="flex items-center justify-between px-4 py-3">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => navigate("home")}
               className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+              data-testid="button-back"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+                <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
               </svg>
             </motion.button>
 
@@ -159,64 +379,78 @@ export const AICoachScreen = () => {
                 <motion.div
                   animate={{ rotate: [0, 360] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                  className="text-lg"
                 >
-                  ✨
+                  <Sparkles size={16} className="text-white" />
                 </motion.div>
-                <h1 className="text-white font-bold text-[17px]" style={{ fontFamily: "Instrument Sans, sans-serif" }}>
+                <h1
+                  className="text-white font-bold text-[17px]"
+                  style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                >
                   FlowAI Coach
                 </h1>
               </div>
-              <p className="text-white/70 text-[11px]">Powered by AI • Always learning</p>
+              <p className="text-white/70 text-[11px]">
+                {cycleData.phase} Phase · Day {cycleData.currentDay}
+              </p>
             </div>
 
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => { setMessages(initMessages); setShowSuggestions(true); }}
+              onClick={handleReset}
               className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center"
+              data-testid="button-reset-chat"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M3 12C3 7 7 3 12 3C15.5 3 18.5 4.8 20.2 7.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M21 12C21 17 17 21 12 21C8.5 21 5.5 19.2 3.8 16.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M21 3L20.2 7.5L16 6.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M3 21L3.8 16.5L8 17.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <RotateCcw size={16} className="text-white" />
             </motion.button>
           </div>
 
-          {/* Disclaimer banner */}
+          {/* Disclaimer + phase context */}
           <div className="mx-4 mb-3 px-3 py-2 rounded-xl bg-white/15 flex items-start gap-2">
             <span className="text-sm flex-shrink-0">ℹ️</span>
             <p className="text-white/80 text-[11px] leading-relaxed">
-              FlowAI provides educational insights, not medical advice. Always consult a doctor for health concerns.
+              Context-aware insights for your{" "}
+              <strong className="text-white">
+                {cycleData.phase} Phase (Day {cycleData.currentDay})
+              </strong>
+              . Not medical advice — always consult a doctor.
             </p>
           </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto py-4 space-y-3 scrollbar-none">
-          <AnimatePresence>
-            {messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} msg={msg} />
+            ))}
           </AnimatePresence>
-          {typing && <TypingIndicator />}
 
-          {/* Suggestions */}
-          {showSuggestions && !typing && (
+          {showTyping && <TypingIndicator />}
+
+          {/* Suggested questions */}
+          {showSuggestions && !isStreaming && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="px-4 pt-2"
+              transition={{ delay: 0.4 }}
+              className="px-4 pt-1"
             >
-              <p className="text-xs text-gray-400 font-medium mb-2 ml-10">Suggested questions</p>
+              <p className="text-xs text-gray-400 font-medium mb-2 ml-10">
+                Suggested questions
+              </p>
               <div className="ml-10 flex flex-wrap gap-2">
-                {SUGGESTIONS.map(s => (
+                {SUGGESTIONS.map((s) => (
                   <motion.button
                     key={s}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => sendMessage(s)}
-                    className="text-xs px-3 py-2 rounded-full border font-medium text-left"
-                    style={{ borderColor: "#C026D3", color: "#8B5CF6", background: "#FAF5FF" }}
+                    className="text-xs px-3 py-2 rounded-full border font-medium"
+                    style={{
+                      borderColor: "#C026D3",
+                      color: "#8B5CF6",
+                      background: "#FAF5FF",
+                    }}
+                    data-testid={`button-suggestion-${s.toLowerCase().replace(/\s+/g, "-").slice(0, 20)}`}
                   >
                     {s}
                   </motion.button>
@@ -228,15 +462,44 @@ export const AICoachScreen = () => {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
+        {/* Input bar */}
         <div className="flex-shrink-0 bg-white border-t border-gray-100 px-4 py-3">
           <div className="flex items-end gap-2">
+            {/* Voice button */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleVoice}
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border"
+              style={{
+                background: isListening ? "#FDF2F8" : "#F9FAFB",
+                borderColor: isListening ? "#EC4899" : "#E5E7EB",
+              }}
+              data-testid="button-voice-input"
+            >
+              {isListening ? (
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                >
+                  <MicOff size={16} color="#EC4899" />
+                </motion.div>
+              ) : (
+                <Mic size={16} color="#9CA3AF" />
+              )}
+            </motion.button>
+
+            {/* Text input */}
             <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-200 px-4 py-2.5 flex items-end gap-2">
               <textarea
                 value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }}}
-                placeholder="Ask FlowAI anything about your cycle..."
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(input);
+                  }
+                }}
+                placeholder="Ask FlowAI anything about your cycle…"
                 className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 resize-none outline-none leading-relaxed"
                 rows={1}
                 style={{ maxHeight: 80 }}
@@ -244,22 +507,22 @@ export const AICoachScreen = () => {
               />
               <span className="text-gray-300 text-lg flex-shrink-0">🌸</span>
             </div>
+
+            {/* Send button */}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => sendMessage(input)}
-              disabled={!input.trim()}
-              className="w-11 h-11 rounded-full flex items-center justify-center shadow-md flex-shrink-0"
+              disabled={!input.trim() || isStreaming}
+              className="w-11 h-11 rounded-full flex items-center justify-center shadow-md flex-shrink-0 transition-all"
               style={{
-                background: input.trim()
-                  ? "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)"
-                  : "#E5E7EB",
+                background:
+                  input.trim() && !isStreaming
+                    ? "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)"
+                    : "#E5E7EB",
               }}
               data-testid="button-send-message"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M22 2L11 13" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
-              </svg>
+              <Send size={16} color="white" />
             </motion.button>
           </div>
         </div>
