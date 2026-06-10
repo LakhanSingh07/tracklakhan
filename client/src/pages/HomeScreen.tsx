@@ -1,64 +1,343 @@
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
 import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
 import { NotificationBell } from "@/pages/NotificationCenterScreen";
 import { computeCyclePrediction } from "@/lib/cyclePrediction";
 
-const CycleCircle = ({ day, phase, daysUntil }: { day: number; phase: string; daysUntil: number }) => {
-  const totalDays = 28;
-  const progress = day / totalDays;
-  const circumference = 2 * Math.PI * 88;
-  const strokeDashoffset = circumference * (1 - progress);
+const PHASE_MAP: Record<number, string> = {};
+for (let d = 1; d <= 5; d++) PHASE_MAP[d] = "menstruation";
+for (let d = 6; d <= 9; d++) PHASE_MAP[d] = "lowFertility";
+for (let d = 10; d <= 13; d++) PHASE_MAP[d] = "highFertility";
+PHASE_MAP[14] = "ovulation";
+for (let d = 15; d <= 17; d++) PHASE_MAP[d] = "highFertility";
+for (let d = 18; d <= 22; d++) PHASE_MAP[d] = "safe";
+for (let d = 23; d <= 28; d++) PHASE_MAP[d] = "verySafe";
 
-  const phaseColors: Record<string, string> = {
-    "Menstrual": "#FF657D",
-    "Follicular": "#FB923C",
-    "Ovulation": "#8B5CF6",
-    "Luteal": "#60A5FA",
-  };
-  const phaseEmojis: Record<string, string> = {
-    "Menstrual": "🩸",
-    "Follicular": "🌱",
-    "Ovulation": "🌟",
-    "Luteal": "🌙",
-  };
-  const color = phaseColors[phase] || "#FF657D";
+const PHASE_STYLE: Record<string, { bg: string; glow: string; text: string; label: string }> = {
+  menstruation: { bg: "#FF6B8A", glow: "rgba(255,107,138,0.22)", text: "#be185d", label: "Period" },
+  lowFertility:  { bg: "#FBBF24", glow: "rgba(251,191,36,0.18)",   text: "#92400e", label: "Low Fertility" },
+  highFertility: { bg: "#F472B6", glow: "rgba(244,114,182,0.2)",   text: "#9d174d", label: "Fertile" },
+  ovulation:     { bg: "#8B5CF6", glow: "rgba(139,92,246,0.25)",   text: "#5b21b6", label: "Ovulation" },
+  safe:          { bg: "#34D399", glow: "rgba(52,211,153,0.18)",   text: "#065f46", label: "Safe" },
+  verySafe:      { bg: "#60A5FA", glow: "rgba(96,165,250,0.18)",   text: "#1e40af", label: "Very Safe" },
+};
+
+function polarXY(cx: number, cy: number, r: number, deg: number) {
+  const rad = (deg - 90) * (Math.PI / 180);
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function segPath(cx: number, cy: number, ro: number, ri: number, s: number, e: number) {
+  const os = polarXY(cx, cy, ro, s), oe = polarXY(cx, cy, ro, e);
+  const is = polarXY(cx, cy, ri, s), ie = polarXY(cx, cy, ri, e);
+  const l = (e - s) > 180 ? 1 : 0;
+  return `M${os.x},${os.y} A${ro},${ro} 0 ${l} 1 ${oe.x},${oe.y} L${ie.x},${ie.y} A${ri},${ri} 0 ${l} 0 ${is.x},${is.y} Z`;
+}
+
+const DropIcon = ({ x, y, color, delay, size = 7 }: { x: number; y: number; color: string; delay: number; size?: number }) => (
+  <motion.g
+    initial={{ opacity: 0, y: y - 6 }}
+    animate={{ opacity: [0, 1, 1, 0.7], y: [y - 6, y, y + 1, y] }}
+    transition={{ duration: 0.8, delay, ease: "easeOut", times: [0, 0.4, 0.7, 1] }}
+  >
+    <motion.path
+      d={`M${x},${y - size} C${x - size},${y - size * 0.3} ${x - size},${y + size * 0.6} ${x},${y + size} C${x + size},${y + size * 0.6} ${x + size},${y - size * 0.3} ${x},${y - size} Z`}
+      fill={color}
+      fillOpacity={0.9}
+      animate={{ scale: [1, 1.08, 1] }}
+      style={{ transformOrigin: `${x}px ${y}px` }}
+      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut", delay: delay + 0.8 }}
+    />
+    <circle cx={x} cy={y - size * 0.35} r={size * 0.28} fill="white" fillOpacity={0.45} />
+  </motion.g>
+);
+
+const SmartCycleDial = ({
+  currentDay,
+  daysUntilNextPeriod,
+  periodLength,
+  cycleLength,
+}: {
+  currentDay: number;
+  daysUntilNextPeriod: number;
+  periodLength: number;
+  cycleLength: number;
+}) => {
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+  const [pulse, setPulse] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let frame: number;
+    const tick = (ts: number) => {
+      if (!startRef.current) startRef.current = ts;
+      setPulse(((ts - startRef.current) / 1000) % (Math.PI * 2));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const TOTAL = cycleLength || 28;
+  const CX = 155, CY = 155;
+  const RO = 138, RI = 88, RM = 113;
+  const GAP = 2.6;
+  const segA = 360 / TOTAL;
+
+  const activeDay = hoveredDay ?? currentDay;
+  const activePh = PHASE_MAP[activeDay] || "verySafe";
+  const curPh = PHASE_MAP[currentDay] || "verySafe";
+  const activeStyle = PHASE_STYLE[activePh];
+  const curStyle = PHASE_STYLE[curPh];
+
+  const isOnPeriod = currentDay <= periodLength;
+  const nextPeriodDay = isOnPeriod ? 1 : TOTAL - daysUntilNextPeriod + 1;
+
+  const pulseR = 1 + 0.06 * Math.sin(pulse * 2.5);
 
   return (
-    <div className="relative flex items-center justify-center w-[216px] h-[216px]">
-      <svg width="216" height="216" className="absolute">
-        <circle cx="108" cy="108" r="88" fill="none" stroke="#F3F0FF" strokeWidth="11" />
-        <motion.circle
-          cx="108" cy="108" r="88"
-          fill="none" stroke={color}
-          strokeWidth="11"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          transform="rotate(-90 108 108)"
-        />
-      </svg>
-      <div className="relative z-10 text-center">
-        <div className="text-[10px] text-gray-400 font-medium uppercase tracking-widest mb-0.5">Day</div>
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-          className="text-[54px] font-bold leading-none"
-          style={{ color, fontFamily: "Instrument Sans, sans-serif" }}
+    <div className="flex flex-col items-center w-full">
+      <div className="relative" style={{ width: 310, height: 310 }}>
+        <svg
+          width={310}
+          height={310}
+          viewBox="0 0 310 310"
+          style={{ overflow: "visible", display: "block" }}
         >
-          {day}
-        </motion.div>
-        <div className="text-[12px] text-gray-500 mt-1 font-medium">
-          {phaseEmojis[phase]} {phase} Phase
-        </div>
-        <div className="text-[11px] mt-1.5 font-semibold" style={{ color }}>
-          {daysUntil === 0 ? "Period today!" : `${daysUntil}d until next period`}
-        </div>
+          <defs>
+            <radialGradient id="dialGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={curStyle.bg} stopOpacity="0.10" />
+              <stop offset="100%" stopColor={curStyle.bg} stopOpacity="0" />
+            </radialGradient>
+            <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor={activeStyle.bg} floodOpacity="0.3" />
+            </filter>
+          </defs>
+
+          <circle cx={CX} cy={CY} r={RO + 5} fill="url(#dialGlow)" />
+          <circle cx={CX} cy={CY} r={RO + 5} fill="none" stroke={curStyle.bg} strokeWidth="22" strokeOpacity="0.06" />
+
+          {Array.from({ length: TOTAL }, (_, i) => {
+            const day = i + 1;
+            const ph = PHASE_MAP[day] || "verySafe";
+            const style = PHASE_STYLE[ph];
+            const s = i * segA + GAP / 2;
+            const e = (i + 1) * segA - GAP / 2;
+            const mid = (s + e) / 2;
+            const isHov = day === hoveredDay;
+            const isCur = day === currentDay;
+            const isOvl = day === 14;
+            const isPeriodDay = day <= periodLength;
+            const isNextPeriodDay = day === nextPeriodDay && !isCur && daysUntilNextPeriod > 0;
+
+            const roActual = isHov ? RO + 8 : RO;
+            const path = segPath(CX, CY, roActual, RI, s, e);
+            const lp = polarXY(CX, CY, RM, mid);
+            const dp = polarXY(CX, CY, RO + 18, mid);
+
+            return (
+              <motion.g
+                key={day}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.022, duration: 0.38, ease: "easeOut" }}
+                style={{ transformOrigin: `${CX}px ${CY}px` }}
+              >
+                <path
+                  d={path}
+                  fill={style.bg}
+                  fillOpacity={isHov ? 1 : isCur ? 1 : 0.72}
+                  stroke={isCur || isHov ? "white" : "none"}
+                  strokeWidth={isCur || isHov ? 1.8 : 0}
+                  filter={isCur ? "url(#dropShadow)" : undefined}
+                  style={{ cursor: "pointer", transition: "fill-opacity 0.15s, d 0.15s" }}
+                  onMouseEnter={() => setHoveredDay(day)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  onTouchStart={() => setHoveredDay(day)}
+                  onTouchEnd={() => setHoveredDay(null)}
+                />
+
+                {isPeriodDay ? (
+                  <DropIcon
+                    x={lp.x}
+                    y={lp.y}
+                    color="white"
+                    delay={i * 0.055}
+                    size={isHov ? 8 : 6.5}
+                  />
+                ) : isOvl ? (
+                  <motion.g style={{ pointerEvents: "none" }}>
+                    <circle cx={lp.x} cy={lp.y} r={11 * pulseR} fill={style.bg} fillOpacity={0.22} />
+                    <circle cx={lp.x} cy={lp.y} r={7 * pulseR} fill={style.bg} fillOpacity={0.38} />
+                    <circle cx={lp.x} cy={lp.y} r={4} fill="white" fillOpacity={0.95} />
+                    <circle cx={lp.x} cy={lp.y} r={1.8} fill={style.bg} />
+                  </motion.g>
+                ) : (
+                  <text
+                    x={lp.x}
+                    y={lp.y}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={isHov ? 11 : 9}
+                    fontWeight={isCur || isHov ? "700" : "400"}
+                    fill="white"
+                    fillOpacity={isHov || isCur ? 1 : 0.85}
+                    style={{ pointerEvents: "none", fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    {day}
+                  </text>
+                )}
+
+                {isCur && (
+                  <motion.g style={{ pointerEvents: "none" }}>
+                    <motion.circle
+                      cx={dp.x} cy={dp.y}
+                      r={8 * pulseR}
+                      fill={style.bg}
+                      fillOpacity={0.22}
+                    />
+                    <circle cx={dp.x} cy={dp.y} r={5} fill={style.bg} stroke="white" strokeWidth={2.2} />
+                  </motion.g>
+                )}
+
+                {isNextPeriodDay && (
+                  <circle
+                    cx={dp.x} cy={dp.y}
+                    r={4.5}
+                    fill="none"
+                    stroke="#FF6B8A"
+                    strokeWidth={1.8}
+                    strokeDasharray="2.8 2"
+                    style={{ pointerEvents: "none" }}
+                  />
+                )}
+              </motion.g>
+            );
+          })}
+
+          <circle cx={CX} cy={CY} r={RI - 1} fill="white" />
+          <circle cx={CX} cy={CY} r={RI - 1} fill="none" stroke={activeStyle.bg} strokeWidth={1.5} strokeOpacity={0.3} />
+
+          <AnimatePresence mode="wait">
+            <motion.g
+              key={activeDay}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{ transformOrigin: `${CX}px ${CY}px` }}
+            >
+              <text
+                x={CX} y={CY - 30}
+                textAnchor="middle"
+                fill={activeStyle.bg}
+                fontSize={8.5}
+                fontWeight="700"
+                letterSpacing="1.8"
+                style={{ fontFamily: "Instrument Sans, sans-serif", textTransform: "uppercase" }}
+              >
+                {activeStyle.label.toUpperCase()}
+              </text>
+
+              <text
+                x={CX} y={CY + 6}
+                textAnchor="middle"
+                fill="#1a1a2e"
+                fontSize={46}
+                fontWeight="800"
+                style={{ fontFamily: "Instrument Sans, sans-serif" }}
+              >
+                {activeDay}
+              </text>
+
+              <text
+                x={CX} y={CY + 22}
+                textAnchor="middle"
+                fill="#94a3b8"
+                fontSize={9}
+                style={{ fontFamily: "Instrument Sans, sans-serif" }}
+              >
+                of {TOTAL} days
+              </text>
+
+              <line x1={CX - 28} y1={CY + 32} x2={CX + 28} y2={CY + 32} stroke="#e2e8f0" strokeWidth={0.8} />
+
+              {isOnPeriod ? (
+                <motion.g
+                  animate={{ scale: [1, 1.04, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ transformOrigin: `${CX}px ${CY + 52}px` }}
+                >
+                  <text
+                    x={CX} y={CY + 50}
+                    textAnchor="middle"
+                    fill="#FF6B8A"
+                    fontSize={11.5}
+                    fontWeight="700"
+                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    Period active
+                  </text>
+                  <text x={CX} y={CY + 64} textAnchor="middle" fill="#FF6B8A" fontSize={10} style={{ fontFamily: "Instrument Sans, sans-serif" }}>
+                    {periodLength - currentDay + 1}d remaining
+                  </text>
+                </motion.g>
+              ) : (
+                <>
+                  <text
+                    x={CX} y={CY + 50}
+                    textAnchor="middle"
+                    fill="#FF6B8A"
+                    fontSize={daysUntilNextPeriod >= 10 ? 28 : 32}
+                    fontWeight="800"
+                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    {daysUntilNextPeriod}
+                  </text>
+                  <text
+                    x={CX} y={CY + 66}
+                    textAnchor="middle"
+                    fill="#94a3b8"
+                    fontSize={8.5}
+                    letterSpacing={0.4}
+                    style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                  >
+                    days to period
+                  </text>
+                </>
+              )}
+            </motion.g>
+          </AnimatePresence>
+        </svg>
+      </div>
+
+      <div className="flex gap-2 flex-wrap justify-center mt-3 px-2">
+        {Object.entries(PHASE_STYLE).map(([key, s]) => {
+          const isActive = (PHASE_MAP[activeDay] || "verySafe") === key;
+          return (
+            <motion.div
+              key={key}
+              animate={{ scale: isActive ? 1 : 0.95, opacity: isActive ? 1 : 0.55 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-semibold"
+              style={{
+                background: isActive ? s.glow : "transparent",
+                borderColor: isActive ? s.bg : "#e2e8f0",
+                color: isActive ? s.text : "#94a3b8",
+              }}
+            >
+              {key === "menstruation" && <span style={{ color: s.bg, fontSize: 9 }}>🩸</span>}
+              {key === "ovulation" && <span style={{ fontSize: 9 }}>✨</span>}
+              {!["menstruation", "ovulation"].includes(key) && (
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.bg }} />
+              )}
+              {s.label}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -211,10 +490,11 @@ export const HomeScreen = () => {
               className="bg-white rounded-3xl py-6 px-5 shadow-sm flex flex-col items-center"
               style={{ boxShadow: "0 4px 24px rgba(139,92,246,0.08)" }}
             >
-              <CycleCircle
-                day={cycleData.currentDay}
-                phase={cycleData.phase}
-                daysUntil={cycleData.daysUntilNextPeriod}
+              <SmartCycleDial
+                currentDay={cycleData.currentDay}
+                daysUntilNextPeriod={cycleData.daysUntilNextPeriod}
+                periodLength={cycleData.periodLength}
+                cycleLength={cycleData.cycleLength}
               />
               {/* Fertile + ovulation */}
               <div className="flex gap-5 mt-4 pt-4 border-t border-gray-100 w-full justify-center">
