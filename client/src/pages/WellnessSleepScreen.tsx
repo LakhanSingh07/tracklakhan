@@ -235,31 +235,36 @@ export const WellnessSleepScreen = () => {
           <div className="px-5 mb-5">
             <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="text-[13px] font-bold text-gray-800 mb-4">Weekly Sleep Trend</h2>
-              <div className="flex items-end gap-1.5 h-28">
+              {/* Bar area — fixed height, labels below separately */}
+              <div className="flex items-end gap-1.5" style={{ height: 80 }}>
                 {last7.map((d, i) => {
-                  const h = maxDuration > 0 ? Math.max((d.duration / maxDuration) * 112, d.duration > 0 ? 6 : 0) : 0;
+                  const h = maxDuration > 0 ? Math.max((d.duration / maxDuration) * 76, d.duration > 0 ? 6 : 0) : 0;
                   const isToday = d.date === todayStr;
                   const barColor = d.quality
                     ? qualityColor(d.quality as SleepLog["quality"])
-                    : isToday ? "#A78BFA" : "#DDD6FE";
+                    : isToday ? "#A78BFA" : "#E5E7EB";
                   return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="flex-1 flex items-end w-full">
-                        <motion.div
-                          className="w-full rounded-t-lg"
-                          style={{ height: h, background: barColor, minHeight: d.duration > 0 ? 6 : 0 }}
-                          initial={{ scaleY: 0, originY: 1 }}
-                          animate={{ scaleY: 1 }}
-                          transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }}
-                        />
-                      </div>
-                      <span className="text-[8px] text-gray-400 font-medium">{d.label}</span>
-                      {d.duration > 0 && (
-                        <span className="text-[7px] text-gray-400">{d.duration}h</span>
-                      )}
-                    </div>
+                    <motion.div
+                      key={i}
+                      className="flex-1 rounded-t-xl"
+                      style={{ height: h, background: barColor, minHeight: d.duration > 0 ? 6 : 0 }}
+                      initial={{ scaleY: 0, originY: 1 }}
+                      animate={{ scaleY: 1 }}
+                      transition={{ delay: i * 0.06, duration: 0.5, ease: "easeOut" }}
+                    />
                   );
                 })}
+              </div>
+              {/* Labels row */}
+              <div className="flex gap-1.5 mt-2">
+                {last7.map((d, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                    <span className="text-[8px] text-gray-400 font-medium">{d.label}</span>
+                    <span className="text-[7px] font-semibold" style={{ color: d.duration > 0 ? "#6D28D9" : "#D1D5DB" }}>
+                      {d.duration > 0 ? `${d.duration}h` : "—"}
+                    </span>
+                  </div>
+                ))}
               </div>
               <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-gray-100 justify-center">
                 {QUALITIES.map(q => (

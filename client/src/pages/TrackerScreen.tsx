@@ -121,7 +121,7 @@ export const TrackerScreen = () => {
                 { icon: "🩸", label: "Flow", screen: "log-entry" as const },
                 { icon: "😊", label: "Mood", screen: "log-mood" as const },
                 { icon: "⚖️", label: "Weight", screen: "log-weight" as const },
-                { icon: "💧", label: "Water", screen: "log-water" as const },
+                { icon: "💧", label: "Water", screen: "wellness-water" as const },
               ].map(item => (
                 <motion.button
                   key={item.label}

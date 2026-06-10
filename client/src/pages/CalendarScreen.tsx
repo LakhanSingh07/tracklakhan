@@ -132,7 +132,10 @@ export const CalendarScreen = () => {
                       >
                         {day}
                       </div>
-                      {dtype !== "normal" && (
+                      {dtype === "period" && !isSelected && (
+                        <span className="text-[9px]" style={{ lineHeight: 1 }}>🩸</span>
+                      )}
+                      {dtype !== "normal" && dtype !== "period" && (
                         <div className="w-1 h-1 rounded-full mt-0.5" style={{ background: isSelected ? "transparent" : colors.dot }} />
                       )}
                     </motion.button>

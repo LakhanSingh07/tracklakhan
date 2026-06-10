@@ -563,7 +563,7 @@ export const HomeScreen = () => {
                     >
                       {d.getDate()}
                     </div>
-                    {isPeriod && <div className="w-1 h-1 rounded-full" style={{ background: "#dc143c", opacity: isToday ? 1 : 0.5 }} />}
+                    {isPeriod && <span className="text-[8px]" style={{ lineHeight: 1 }}>🩸</span>}
                   </motion.div>
                 );
               })}
