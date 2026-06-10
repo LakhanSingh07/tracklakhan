@@ -1,0 +1,243 @@
+No. **Don't build Partner Mode yet.**
+
+You are still pre-launch. Partner Mode is a nice-to-have feature, not a core retention or revenue feature.
+
+Your next modules should be:
+
+## Priority 1 — AI Health Coach (Build Immediately)
+
+This is the feature users will talk about.
+
+Give Replit this prompt:
+
+```text
+Build FlowAI Coach, an AI-powered women's health assistant.
+
+Requirements:
+
+1. New Screen: AI Coach
+
+- ChatGPT-style interface
+- Conversation history
+- Suggested prompts
+- Voice input button
+- Typing animation
+
+2. Context-Aware AI
+
+AI must use:
+
+- Current cycle phase
+- Predicted next period
+- Symptom history
+- Mood history
+- Sleep data
+- Weight data
+- PCOS data if enabled
+
+3. Suggested Questions
+
+- Why is my period late?
+- Why am I bloated?
+- Why am I getting cramps?
+- What foods help today?
+- Explain my cycle prediction
+- What should I expect this week?
+
+4. Personalized Insights
+
+Example:
+
+"Based on your last 3 cycles and current luteal phase, mild bloating and mood changes may occur."
+
+5. Safety
+
+- No diagnosis
+- No prescriptions
+- Medical disclaimer
+- Escalation recommendations
+
+6. Memory
+
+Store recent conversations.
+
+7. Premium Ready
+
+Track usage count for future paywall.
+```
+
+---
+
+# Priority 2 — Wellness & Symptom Intelligence
+
+```text
+Build FlowAI Wellness Intelligence Engine.
+
+Features:
+
+1. Daily Wellness Score
+
+0-100 score based on:
+- Sleep
+- Symptoms
+- Mood
+- Exercise
+- Cycle phase
+
+2. Health Rings
+
+- Physical
+- Emotional
+- Lifestyle
+
+3. Trend Detection
+
+Detect:
+- Increasing cramps
+- Increasing stress
+- Sleep decline
+- Cycle irregularity
+
+4. Insight Cards
+
+Examples:
+
+"Your sleep drops before periods."
+
+"Stress increases during luteal phase."
+
+"Hydration improves symptom scores."
+
+5. Weekly Summary
+
+6. Monthly Summary
+
+7. AI-generated recommendations.
+```
+
+---
+
+# Priority 3 — Subscription System
+
+You need revenue infrastructure before more features.
+
+```text
+Build complete subscription architecture.
+
+Plans:
+
+Free
+Plus
+Pro
+
+Create:
+
+- Paywall screen
+- Upgrade modal
+- Subscription settings
+- Usage tracking
+- Feature gating
+
+Premium Features:
+
+- AI Coach unlimited
+- Advanced predictions
+- AI reports
+- PCOS analytics
+
+Add Razorpay integration architecture.
+```
+
+---
+
+# Priority 4 — PDF Health Reports
+
+This is surprisingly valuable.
+
+```text
+Build Doctor Shareable Reports.
+
+Generate PDF containing:
+
+- Cycle history
+- Predictions
+- Symptom trends
+- Mood trends
+- Wellness scores
+- AI summary
+
+Export:
+- PDF
+- Share
+- Download
+
+Create professional medical-style layout.
+```
+
+---
+
+# Priority 5 — PCOS Companion
+
+Only after AI Coach and subscriptions.
+
+```text
+Build dedicated PCOS Companion.
+
+Features:
+
+- Weight tracking
+- Hair fall tracking
+- Acne tracking
+- Sleep tracking
+- Exercise tracking
+- PCOS score
+- Monthly PCOS report
+- AI PCOS insights
+```
+
+---
+
+# Priority 6 — Notification Intelligence Engine
+
+```text
+Build Smart Notification Engine.
+
+Generate notifications using:
+
+- Cycle phase
+- Symptoms
+- Missed logs
+- AI predictions
+
+Examples:
+
+"Your predicted period is in 2 days."
+
+"You usually report fatigue during this phase."
+
+"Logging today will improve prediction accuracy."
+
+Include:
+- Quiet hours
+- Notification preferences
+- Notification center
+```
+
+---
+
+### What FlowAI has now
+
+✅ Onboarding
+✅ Cycle Prediction Engine
+✅ Insights Dashboard
+✅ Calendar
+✅ Tracking Foundation
+
+### What makes it a startup
+
+🚀 AI Coach
+🚀 Subscription Revenue
+🚀 Health Reports
+🚀 PCOS Module
+
+Build those four next before adding Partner Mode, Community, Pregnancy Mode, or Doctor Marketplace. That's the fastest path to getting real users and generating revenue.
