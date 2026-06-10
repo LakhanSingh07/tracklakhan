@@ -1,0 +1,213 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
+import { BottomNav } from "@/components/BottomNav";
+import { useApp } from "@/lib/appContext";
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+type DayType = "period" | "fertile" | "ovulation" | "normal" | "future-period";
+
+const getDayType = (date: Date, lastPeriod: Date): DayType => {
+  const diff = Math.floor((date.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24));
+  const dayInCycle = ((diff % 28) + 28) % 28;
+  if (dayInCycle < 5) return "period";
+  if (dayInCycle >= 11 && dayInCycle <= 15) return "fertile";
+  if (dayInCycle === 13) return "ovulation";
+  return "normal";
+};
+
+const dayColors: Record<DayType, { bg: string; text: string; dot?: string }> = {
+  period: { bg: "#FF657D", text: "white", dot: "#FF657D" },
+  fertile: { bg: "#A78BFA22", text: "#A78BFA", dot: "#A78BFA" },
+  ovulation: { bg: "#A78BFA", text: "white", dot: "#A78BFA" },
+  normal: { bg: "transparent", text: "#1F2937" },
+  "future-period": { bg: "#FFE7EA", text: "#FF657D", dot: "#FF657D" },
+};
+
+export const CalendarScreen = () => {
+  const { cycleData, navigate, selectedDate, setSelectedDate } = useApp();
+  const [viewDate, setViewDate] = useState(new Date());
+  const today = new Date();
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const prevMonth = () => setViewDate(new Date(year, month - 1));
+  const nextMonth = () => setViewDate(new Date(year, month + 1));
+
+  const cells: (number | null)[] = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const phaseInfo = {
+    period: { label: "Period", color: "#FF657D", icon: "🩸" },
+    fertile: { label: "Fertile Window", color: "#A78BFA", icon: "🌱" },
+    ovulation: { label: "Ovulation", color: "#A78BFA", icon: "⭐" },
+    normal: { label: "Normal", color: "#9CA3AF", icon: "○" },
+  };
+
+  const selectedLog = {
+    flow: "medium" as const,
+    mood: "😊",
+    weight: 58,
+    temperature: 36.5,
+    water: 1800,
+  };
+
+  return (
+    <MobileLayout gradient="linear-gradient(180deg, #F9F9F9 0%, #FFE7EA 100%)">
+      <div className="flex flex-col h-screen">
+        <StatusBar />
+        <div className="flex-1 overflow-y-auto pb-2">
+          {/* Header */}
+          <div className="px-5 pt-2 pb-4">
+            <h1 className="text-[22px] font-bold text-gray-900" style={{ fontFamily: "Instrument Sans, sans-serif" }}>Calendar</h1>
+            <p className="text-sm text-gray-400">Track your cycle journey</p>
+          </div>
+
+          {/* Calendar card */}
+          <div className="mx-5 bg-white rounded-3xl p-5 shadow-sm mb-4">
+            {/* Month nav */}
+            <div className="flex items-center justify-between mb-5">
+              <motion.button whileTap={{ scale: 0.9 }} onClick={prevMonth}
+                className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M15 18L9 12L15 6" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </motion.button>
+              <motion.div key={`${year}-${month}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="text-[17px] font-bold text-gray-900">
+                {MONTHS[month]} {year}
+              </motion.div>
+              <motion.button whileTap={{ scale: 0.9 }} onClick={nextMonth}
+                className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 6L15 12L9 18" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </motion.button>
+            </div>
+
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 mb-2">
+              {DAYS.map(d => (
+                <div key={d} className="text-center text-[11px] font-semibold text-gray-400 py-1">{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${year}-${month}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="grid grid-cols-7 gap-y-1"
+              >
+                {cells.map((day, i) => {
+                  if (!day) return <div key={i} />;
+                  const date = new Date(year, month, day);
+                  const isToday = date.toDateString() === today.toDateString();
+                  const isSelected = date.toDateString() === selectedDate.toDateString();
+                  const dtype = getDayType(date, cycleData.lastPeriodStart);
+                  const colors = dayColors[dtype];
+                  const isFuture = date > today;
+
+                  return (
+                    <motion.button
+                      key={i}
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() => { setSelectedDate(date); navigate("calendar"); }}
+                      className="flex flex-col items-center py-1"
+                    >
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold relative"
+                        style={{
+                          background: isSelected ? "#FF657D" : isToday ? "#FFF0F3" : dtype !== "normal" ? colors.bg : "transparent",
+                          color: isSelected ? "white" : isToday ? "#FF657D" : isFuture ? "#9CA3AF" : colors.text,
+                          border: isToday && !isSelected ? "2px solid #FF657D" : "none",
+                        }}
+                      >
+                        {day}
+                      </div>
+                      {dtype !== "normal" && (
+                        <div className="w-1 h-1 rounded-full mt-0.5" style={{ background: isSelected ? "transparent" : colors.dot }} />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Legend */}
+          <div className="mx-5 flex flex-wrap gap-3 mb-4">
+            {Object.entries(phaseInfo).filter(([k]) => k !== "normal").map(([key, info]) => (
+              <div key={key} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ background: info.color }} />
+                <span className="text-[11px] text-gray-500">{info.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Selected day info */}
+          <div className="mx-5 bg-white rounded-3xl p-5 shadow-sm mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[16px] font-bold text-gray-900">
+                  {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                </h3>
+                <p className="text-sm text-[#FF657D]">
+                  Day {Math.floor((selectedDate.getTime() - cycleData.lastPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) % 28 + 1} of cycle
+                </p>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("log-entry")}
+                className="px-4 py-2 rounded-full text-sm font-semibold text-white shadow-sm"
+                style={{ background: "linear-gradient(135deg, #FF8FA3, #FF657D)" }}
+              >
+                + Log
+              </motion.button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Flow", value: selectedLog.flow, icon: "🩸", color: "#FF657D" },
+                { label: "Mood", value: selectedLog.mood, icon: "", color: "#A78BFA" },
+                { label: "Weight", value: `${selectedLog.weight} kg`, icon: "⚖️", color: "#60A5FA" },
+                { label: "Temp", value: `${selectedLog.temperature}°C`, icon: "🌡️", color: "#F59E0B" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl p-3 bg-gray-50">
+                  <div className="text-[11px] text-gray-400 mb-1">{item.label}</div>
+                  <div className="text-[15px] font-bold" style={{ color: item.color }}>
+                    {item.icon} {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Edit cycle button */}
+          <div className="mx-5 mb-4">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("edit-period")}
+              className="w-full py-4 rounded-2xl border-2 border-[#FF657D] flex items-center justify-center gap-2 text-[#FF657D] font-semibold"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4C3.4 4 3 4.4 3 5V20C3 20.6 3.4 21 4 21H19C19.6 21 20 20.6 20 20V13" stroke="#FF657D" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M18.5 2.5L21.5 5.5L12 15H9V12L18.5 2.5Z" stroke="#FF657D" strokeWidth="2" strokeLinejoin="round"/>
+              </svg>
+              Edit Period Dates
+            </motion.button>
+          </div>
+        </div>
+        <BottomNav />
+        <HomeIndicator />
+      </div>
+    </MobileLayout>
+  );
+};

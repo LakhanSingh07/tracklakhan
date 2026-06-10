@@ -1,0 +1,162 @@
+import React, { createContext, useContext, useState, ReactNode } from "react";
+
+export type Screen =
+  | "splash"
+  | "onboarding"
+  | "auth-signup"
+  | "auth-signup-form"
+  | "auth-signin"
+  | "auth-otp"
+  | "auth-password"
+  | "auth-success"
+  | "home"
+  | "calendar"
+  | "log-entry"
+  | "log-mood"
+  | "log-weight"
+  | "log-temperature"
+  | "log-water"
+  | "tracker"
+  | "health-bar"
+  | "health-area"
+  | "cycles"
+  | "phase-period"
+  | "phase-growth"
+  | "phase-release"
+  | "phase-progesterone"
+  | "edit-period"
+  | "account"
+  | "personal-data"
+  | "reminder"
+  | "account-security"
+  | "premium"
+  | "billing"
+  | "payment-methods"
+  | "payment-summary"
+  | "payment-progress"
+  | "congratulations"
+  | "logout-confirm";
+
+interface CycleDay {
+  date: number;
+  type: "period" | "fertile" | "ovulation" | "normal";
+  logged?: boolean;
+}
+
+interface LogEntry {
+  date: string;
+  flow?: "light" | "medium" | "heavy";
+  mood?: string;
+  weight?: number;
+  temperature?: number;
+  water?: number;
+  notes?: string;
+}
+
+interface AppState {
+  currentScreen: Screen;
+  navigate: (screen: Screen) => void;
+  previousScreen: Screen | null;
+  goBack: () => void;
+  user: {
+    name: string;
+    email: string;
+    avatar?: string;
+  };
+  cycleData: {
+    lastPeriodStart: Date;
+    cycleLength: number;
+    periodLength: number;
+    nextPeriod: Date;
+    currentDay: number;
+    phase: string;
+    daysUntilNextPeriod: number;
+  };
+  logs: LogEntry[];
+  addLog: (entry: LogEntry) => void;
+  todayWater: number;
+  setTodayWater: (ml: number) => void;
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
+}
+
+const AppContext = createContext<AppState | null>(null);
+
+const lastPeriod = new Date(2024, 2, 1);
+const cycleLength = 28;
+const nextPeriod = new Date(lastPeriod);
+nextPeriod.setDate(lastPeriod.getDate() + cycleLength);
+const today = new Date();
+const daysSincePeriod = Math.floor((today.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24));
+const currentDay = (daysSincePeriod % cycleLength) + 1;
+const daysUntilNext = cycleLength - (daysSincePeriod % cycleLength);
+
+const getPhase = (day: number) => {
+  if (day <= 5) return "Menstrual";
+  if (day <= 13) return "Follicular";
+  if (day === 14) return "Ovulation";
+  return "Luteal";
+};
+
+export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
+  const [previousScreen, setPreviousScreen] = useState<Screen | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([
+    { date: "2024-03-01", flow: "medium", mood: "😊", weight: 58, temperature: 36.5, water: 1800 },
+    { date: "2024-03-02", flow: "heavy", mood: "😴", weight: 58.2, temperature: 36.6, water: 2000 },
+    { date: "2024-03-03", flow: "medium", mood: "😐", weight: 57.9, temperature: 36.4, water: 1600 },
+    { date: "2024-03-04", flow: "light", mood: "😊", weight: 57.8, temperature: 36.5, water: 2200 },
+    { date: "2024-03-05", flow: "light", mood: "😄", weight: 57.7, temperature: 36.3, water: 1900 },
+  ]);
+  const [todayWater, setTodayWater] = useState(1540);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const navigate = (screen: Screen) => {
+    setPreviousScreen(currentScreen);
+    setCurrentScreen(screen);
+  };
+
+  const goBack = () => {
+    if (previousScreen) {
+      setCurrentScreen(previousScreen);
+      setPreviousScreen(null);
+    }
+  };
+
+  const addLog = (entry: LogEntry) => {
+    setLogs(prev => [...prev.filter(l => l.date !== entry.date), entry]);
+  };
+
+  return (
+    <AppContext.Provider value={{
+      currentScreen,
+      navigate,
+      previousScreen,
+      goBack,
+      user: { name: "Maria", email: "maria@example.com", avatar: undefined },
+      cycleData: {
+        lastPeriodStart: lastPeriod,
+        cycleLength,
+        periodLength: 5,
+        nextPeriod,
+        currentDay,
+        phase: getPhase(currentDay),
+        daysUntilNextPeriod: daysUntilNext,
+      },
+      logs,
+      addLog,
+      todayWater,
+      setTodayWater,
+      selectedDate,
+      setSelectedDate,
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useApp = () => {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error("useApp must be used within AppProvider");
+  return ctx;
+};
