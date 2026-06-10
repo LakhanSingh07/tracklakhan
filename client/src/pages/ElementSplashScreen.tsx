@@ -292,22 +292,44 @@ export const ElementSplashScreen = (): JSX.Element => {
           transition={{ delay: 0.65, duration: 0.55, ease: "easeOut" }}
           className="mt-6 text-center"
         >
-          <h1
-            className="text-white font-bold tracking-wide drop-shadow-lg"
-            style={{
-              fontSize: 40,
-              fontFamily: "Instrument Sans, sans-serif",
-              textShadow: "0 2px 16px rgba(200,40,70,0.25), 0 4px 30px rgba(255,101,125,0.2)",
-              lineHeight: 1.1,
-            }}
-          >
-            Flowly
-          </h1>
+          <div className="flex items-center justify-center gap-1">
+            <h1
+              className="text-white font-bold tracking-wide drop-shadow-lg"
+              style={{
+                fontSize: 42,
+                fontFamily: "Instrument Sans, sans-serif",
+                textShadow: "0 2px 16px rgba(200,40,70,0.25), 0 4px 30px rgba(255,101,125,0.2)",
+                lineHeight: 1.1,
+              }}
+            >
+              Flow
+            </h1>
+            <motion.span
+              animate={{ rotate: [0, 12, -8, 12, 0], scale: [1, 1.12, 1, 1.08, 1] }}
+              transition={{ duration: 2.5, repeat: Infinity, delay: 1.5 }}
+              className="text-white font-bold drop-shadow-lg"
+              style={{
+                fontSize: 42,
+                fontFamily: "Instrument Sans, sans-serif",
+                textShadow: "0 2px 20px rgba(255,255,255,0.4)",
+                lineHeight: 1.1,
+              }}
+            >
+              AI
+            </motion.span>
+            <motion.span
+              animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.2, 0.8] }}
+              transition={{ duration: 1.8, repeat: Infinity }}
+              className="text-xl ml-1"
+            >
+              ✨
+            </motion.span>
+          </div>
           <p
-            className="text-white/80 font-semibold tracking-[0.28em] uppercase mt-1 drop-shadow"
-            style={{ fontSize: 12, letterSpacing: "0.28em" }}
+            className="text-white/80 font-semibold tracking-[0.22em] uppercase mt-1.5 drop-shadow"
+            style={{ fontSize: 11, letterSpacing: "0.22em" }}
           >
-            Period Tracker
+            AI Period Tracker
           </p>
         </motion.div>
 
@@ -319,7 +341,7 @@ export const ElementSplashScreen = (): JSX.Element => {
           className="mt-3 text-white/75 text-center font-medium"
           style={{ fontSize: 13, textShadow: "0 1px 6px rgba(0,0,0,0.1)" }}
         >
-          Know your body. Love your cycle. 🌸
+          Know Your Cycle. Own Your Health. 🌸
         </motion.p>
 
         {/* Animated loading dots */}

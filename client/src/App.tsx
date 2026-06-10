@@ -16,6 +16,9 @@ import { MyCyclesScreen } from "@/pages/MyCyclesScreen";
 import { HealthBarScreen } from "@/pages/HealthScreen";
 import { PhasePeriodScreen, PhaseGrowthScreen, PhaseReleaseScreen, PhaseProgesteroneScreen } from "@/pages/PhaseScreens";
 import { EditPeriodScreen } from "@/pages/EditPeriodScreen";
+import { AICoachScreen } from "@/pages/AICoachScreen";
+import { InsightsScreen } from "@/pages/InsightsScreen";
+import { PCOSScreen } from "@/pages/PCOSScreen";
 import {
   AccountScreen,
   PersonalDataScreen,
@@ -60,6 +63,9 @@ function AppRouter() {
     case "phase-release": return <PhaseReleaseScreen />;
     case "phase-progesterone": return <PhaseProgesteroneScreen />;
     case "edit-period": return <EditPeriodScreen />;
+    case "ai-coach": return <AICoachScreen />;
+    case "insights": return <InsightsScreen />;
+    case "pcos": return <PCOSScreen />;
     case "account": return <AccountScreen />;
     case "personal-data": return <PersonalDataScreen />;
     case "reminder": return <ReminderScreen />;
