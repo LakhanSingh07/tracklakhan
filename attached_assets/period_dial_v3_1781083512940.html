@@ -1,0 +1,229 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.root {
+  font-family: var(--font-sans);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 16px 36px; gap: 20px;
+}
+.chips {
+  display: flex; gap: 7px; flex-wrap: wrap;
+  justify-content: center; max-width: 360px;
+}
+.chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border-radius: 20px;
+  font-size: 11px; font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.18s; cursor: default;
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+  border-color: var(--color-border-tertiary);
+}
+.chip.active {
+  background: var(--chip-bg);
+  border-color: var(--chip-col);
+  color: var(--chip-col);
+}
+.chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--chip-col); flex-shrink:0; }
+</style>
+
+<div class="root" id="root"></div>
+
+<script>
+const P = {
+  menstruation: { bg:"#F472B6", glow:"rgba(244,114,182,0.18)", text:"#be185d", label:"Period" },
+  lowFertility:  { bg:"#FBBF24", glow:"rgba(251,191,36,0.15)",  text:"#92400e", label:"Low fertility" },
+  highFertility: { bg:"#F9A8D4", glow:"rgba(249,168,212,0.18)", text:"#9d174d", label:"Fertile" },
+  ovulation:     { bg:"#C084FC", glow:"rgba(192,132,252,0.22)", text:"#7e22ce", label:"Ovulation" },
+  safe:          { bg:"#86EFAC", glow:"rgba(134,239,172,0.15)", text:"#166534", label:"Safe" },
+  verySafe:      { bg:"#93C5FD", glow:"rgba(147,197,253,0.15)", text:"#1e40af", label:"Very safe" },
+};
+
+const DAY_PHASE = {};
+for(let d=1;d<=5;d++) DAY_PHASE[d]="menstruation";
+for(let d=6;d<=9;d++) DAY_PHASE[d]="lowFertility";
+for(let d=10;d<=13;d++) DAY_PHASE[d]="highFertility";
+DAY_PHASE[14]="ovulation";
+for(let d=15;d<=17;d++) DAY_PHASE[d]="highFertility";
+for(let d=18;d<=22;d++) DAY_PHASE[d]="safe";
+for(let d=23;d<=28;d++) DAY_PHASE[d]="verySafe";
+
+const CHIPS = ["menstruation","lowFertility","highFertility","ovulation","safe","verySafe"];
+
+let currentDay = 8, hoveredDay = null;
+let pulseT = 0, animProgress = 0, animStart = null;
+
+function polarXY(cx,cy,r,deg){
+  const rad=(deg-90)*Math.PI/180;
+  return {x:cx+r*Math.cos(rad), y:cy+r*Math.sin(rad)};
+}
+function segPath(cx,cy,ro,ri,s,e){
+  const os=polarXY(cx,cy,ro,s),oe=polarXY(cx,cy,ro,e);
+  const is=polarXY(cx,cy,ri,s),ie=polarXY(cx,cy,ri,e);
+  const l=(e-s)>180?1:0;
+  return `M${os.x},${os.y} A${ro},${ro} 0 ${l} 1 ${oe.x},${oe.y} L${ie.x},${ie.y} A${ri},${ri} 0 ${l} 0 ${is.x},${is.y} Z`;
+}
+
+function buildSVG(){
+  const CX=165,CY=165,TOTAL=28,GAP=2.4;
+  const RO=152,RI=100,RM=126;
+  const segA=360/TOTAL;
+  const active=hoveredDay||currentDay;
+  const activePh=DAY_PHASE[active];
+  const col=P[activePh];
+  const curCol=P[DAY_PHASE[currentDay]];
+  const nextIn=currentDay<=5?0:28-currentDay+1;
+  const isOnPeriod=currentDay<=5;
+
+  let segs='',nums='',marks='';
+
+  for(let i=0;i<TOTAL;i++){
+    const day=i+1;
+    const ph=DAY_PHASE[day];
+    const c=P[ph];
+    const s=i*segA+GAP/2, e=(i+1)*segA-GAP/2;
+    const ae=s+(e-s)*animProgress;
+    if(ae<=s) continue;
+    const isHov=day===active, isCur=day===currentDay, isOvl=day===14;
+    const ro=isHov?RO+7:RO;
+    const path=segPath(CX,CY,ro,RI,s,ae);
+    const mid=(s+e)/2;
+    const lp=polarXY(CX,CY,RM,mid);
+    const op=isHov?1:isCur?1:0.7;
+    const sw=isCur||isHov?2:0;
+
+    segs+=`<path d="${path}" fill="${c.bg}" fill-opacity="${op}" stroke="${isCur||isHov?'white':'none'}" stroke-width="${sw}" data-day="${day}" class="dseg" style="cursor:pointer"/>`;
+
+    // No number on day 14 — show star instead
+    if(isOvl){
+      // Ovulation sparkle symbol
+      const pr1=13*(1+0.07*Math.sin(pulseT));
+      const pr2=9*(1+0.07*Math.sin(pulseT+1));
+      marks+=`
+        <circle cx="${lp.x}" cy="${lp.y}" r="${pr1}" fill="${c.bg}" fill-opacity="0.25" style="pointer-events:none"/>
+        <circle cx="${lp.x}" cy="${lp.y}" r="${pr2}" fill="${c.bg}" fill-opacity="0.45" style="pointer-events:none"/>
+        <circle cx="${lp.x}" cy="${lp.y}" r="5" fill="white" style="pointer-events:none"/>
+        <circle cx="${lp.x}" cy="${lp.y}" r="2.5" fill="${c.bg}" style="pointer-events:none"/>
+      `;
+    } else {
+      const fs=isHov?11:9;
+      const fw=isCur||isHov?'700':'400';
+      nums+=`<text x="${lp.x}" y="${lp.y}" text-anchor="middle" dominant-baseline="central" font-size="${fs}" font-weight="${fw}" fill="white" fill-opacity="${isHov||isCur?1:0.88}" style="pointer-events:none;font-family:var(--font-sans)">${day}</text>`;
+    }
+
+    // Current day outer pip
+    if(isCur){
+      const dp=polarXY(CX,CY,RO+16,mid);
+      marks+=`
+        <circle cx="${dp.x}" cy="${dp.y}" r="6.5" fill="${c.bg}" fill-opacity="0.25" style="pointer-events:none"/>
+        <circle cx="${dp.x}" cy="${dp.y}" r="4.5" fill="${c.bg}" stroke="white" stroke-width="2" style="pointer-events:none"/>
+      `;
+    }
+
+    // Next period dashed pip
+    const nextPeriodDay=currentDay<=5?1:29-nextIn;
+    if(day===nextPeriodDay&&!isCur&&nextIn>0){
+      const dp2=polarXY(CX,CY,RO+16,mid);
+      marks+=`<circle cx="${dp2.x}" cy="${dp2.y}" r="4" fill="none" stroke="#F472B6" stroke-width="1.8" stroke-dasharray="2.5 2" style="pointer-events:none"/>`;
+    }
+  }
+
+  // Soft ambient glow behind whole ring
+  const glowRing=`<circle cx="${CX}" cy="${CY}" r="${RO+4}" fill="none" stroke="${curCol.bg}" stroke-width="26" stroke-opacity="0.07"/>`;
+
+  // Center content
+  const phLabel=P[DAY_PHASE[active]].label.toUpperCase();
+
+  // Big countdown number sizing
+  const bigNum=isOnPeriod?'♥':String(nextIn);
+  const bigFs=nextIn>=10?38:42;
+
+  const center=`
+    <circle cx="${CX}" cy="${CY}" r="${RI-2}" fill="var(--color-background-primary)"/>
+    <circle cx="${CX}" cy="${CY}" r="${RI-2}" fill="none" stroke="${col.bg}" stroke-width="1.8" stroke-opacity="0.3"/>
+
+    <text x="${CX}" y="${CY-36}" text-anchor="middle" fill="${col.bg}" font-size="9.5" font-weight="600" letter-spacing="1.5" style="font-family:var(--font-sans);text-transform:uppercase">${phLabel}</text>
+
+    <text x="${CX}" y="${CY-10}" text-anchor="middle" fill="var(--color-text-primary)" font-size="48" font-weight="700" style="font-family:var(--font-sans)">${active}</text>
+
+    <text x="${CX}" y="${CY+14}" text-anchor="middle" fill="var(--color-text-secondary)" font-size="10" style="font-family:var(--font-sans)">day ${active}</text>
+
+    <line x1="${CX-32}" y1="${CY+26}" x2="${CX+32}" y2="${CY+26}" stroke="var(--color-border-tertiary)" stroke-width="0.8"/>
+
+    ${isOnPeriod
+      ? `<text x="${CX}" y="${CY+50}" text-anchor="middle" fill="#F472B6" font-size="13" font-weight="600" style="font-family:var(--font-sans)">period active ♥</text>`
+      : `
+        <text x="${CX}" y="${CY+52}" text-anchor="middle" fill="#F472B6" font-size="${bigFs}" font-weight="800" style="font-family:var(--font-sans)">${nextIn}</text>
+        <text x="${CX}" y="${CY+70}" text-anchor="middle" fill="var(--color-text-secondary)" font-size="9" letter-spacing="0.5" style="font-family:var(--font-sans)">days to period</text>
+      `
+    }
+  `;
+
+  return `<svg width="330" height="330" viewBox="0 0 330 330" style="overflow:visible;display:block">
+    <defs>
+      <radialGradient id="cg" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${col.bg}" stop-opacity="0.06"/>
+        <stop offset="100%" stop-color="${col.bg}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="${CX}" cy="${CY}" r="${RI-2}" fill="url(#cg)"/>
+    ${glowRing}${segs}${nums}${marks}${center}
+  </svg>`;
+}
+
+function buildChips(){
+  const active=hoveredDay||currentDay;
+  const activePh=DAY_PHASE[active];
+  return CHIPS.map(phase=>{
+    const c=P[phase];
+    const isA=activePh===phase;
+    return `<div class="chip${isA?' active':''}" style="--chip-col:${c.bg};--chip-bg:${c.glow}">
+      <span class="chip-dot"></span>${c.label}
+    </div>`;
+  }).join('');
+}
+
+function render(partial=false){
+  if(partial){
+    const di=document.getElementById('di');
+    if(di) di.innerHTML=buildSVG();
+    const ch=document.getElementById('ch');
+    if(ch) ch.innerHTML=buildChips();
+    bind(); return;
+  }
+  document.getElementById('root').innerHTML=`
+    <div id="di">${buildSVG()}</div>
+    <div class="chips" id="ch">${buildChips()}</div>
+  `;
+  bind();
+}
+
+function bind(){
+  document.querySelectorAll('.dseg').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{hoveredDay=+el.dataset.day;render(true);});
+    el.addEventListener('mouseleave',()=>{hoveredDay=null;render(true);});
+    el.addEventListener('click',()=>{currentDay=+el.dataset.day;hoveredDay=null;render(true);});
+  });
+}
+
+function animate(ts){
+  if(!animStart) animStart=ts;
+  const p=Math.min((ts-animStart)/900,1);
+  animProgress=1-Math.pow(1-p,3);
+  render(true);
+  if(p<1) requestAnimationFrame(animate);
+  else { animProgress=1; render(true); startPulse(); }
+}
+
+function startPulse(){
+  setInterval(()=>{
+    pulseT+=0.07;
+    const di=document.getElementById('di');
+    if(di){di.innerHTML=buildSVG();bind();}
+  },40);
+}
+
+render(false);
+requestAnimationFrame(animate);
+</script>
