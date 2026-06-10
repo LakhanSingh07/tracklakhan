@@ -1,0 +1,258 @@
+Build a complete production-ready payment and subscription system for FlowAI.
+
+GOAL:
+
+Create a scalable subscription architecture supporting Free, Plus, and Pro plans with Razorpay integration.
+
+---
+
+SUBSCRIPTION PLANS
+
+FREE
+
+Features:
+
+* Period Tracking
+* Calendar
+* Basic Predictions
+* Basic Insights
+
+Limitations:
+
+* Limited AI Coach messages
+* No PDF Reports
+* No PCOS Analytics
+
+---
+
+PLUS PLAN
+
+Price:
+
+₹199/month
+
+Features:
+
+* Unlimited AI Coach
+* AI Predictions
+* Advanced Insights
+* Wellness Analytics
+* PDF Health Reports
+
+---
+
+PRO PLAN
+
+Price:
+
+₹399/month
+
+Features:
+
+* Everything in Plus
+* PCOS Companion
+* Advanced Cycle Analytics
+* Premium Reports
+* Future Doctor Consultation Discounts
+
+---
+
+PAYWALL SYSTEM
+
+Create:
+
+1. Upgrade Screen
+
+Show:
+
+* Free vs Plus vs Pro
+* Feature comparison
+* Monthly pricing
+* Annual pricing
+
+2. Locked Feature Screen
+
+When user accesses premium feature:
+
+Show:
+
+* Benefits
+* Upgrade CTA
+* Plan Selection
+
+3. Subscription Success Screen
+
+Show:
+
+* Welcome Message
+* Activated Features
+* Continue Button
+
+---
+
+RAZORPAY INTEGRATION
+
+Support:
+
+* UPI
+* Credit Cards
+* Debit Cards
+* Net Banking
+* Wallets
+
+Create:
+
+* Create Order API
+* Verify Payment API
+* Payment Success Handler
+* Payment Failure Handler
+* Retry Payment Flow
+
+---
+
+DATABASE TABLES
+
+subscriptions
+
+Fields:
+
+id
+user_id
+plan
+status
+start_date
+end_date
+payment_id
+order_id
+amount
+created_at
+
+---
+
+PAYMENT HISTORY
+
+Create Screen:
+
+* Date
+* Amount
+* Plan
+* Invoice
+* Status
+
+Users can:
+
+* View History
+* Download Invoice
+
+---
+
+FREE TRIAL
+
+Implement:
+
+7-Day Trial
+
+Track:
+
+trial_start
+trial_end
+
+Show countdown:
+
+"5 days remaining"
+
+---
+
+FEATURE GATING
+
+Protect:
+
+AI Coach
+PDF Reports
+PCOS Analytics
+Advanced Insights
+
+Middleware should validate:
+
+* Active Subscription
+* Trial Status
+* Plan Type
+
+---
+
+SUBSCRIPTION MANAGEMENT
+
+User can:
+
+* Upgrade
+* Downgrade
+* Cancel
+* Renew
+
+Display:
+
+Current Plan
+Renewal Date
+Payment Method
+
+---
+
+PROMO CODES
+
+Create:
+
+promo_codes table
+
+Support:
+
+* Percentage Discount
+* Fixed Discount
+* Trial Extension
+
+---
+
+ANALYTICS
+
+Track:
+
+* Trial Started
+* Trial Converted
+* Payment Success
+* Payment Failure
+* Churn Rate
+* Revenue
+
+Dashboard:
+
+MRR
+ARR
+Active Subscribers
+Conversion Rate
+
+---
+
+SECURITY
+
+Never trust frontend plan validation.
+
+Validate all subscriptions server-side.
+
+Verify Razorpay signatures.
+
+Store payment records securely.
+
+Handle failed payments gracefully.
+
+---
+
+FUTURE READY
+
+Architecture must support:
+
+* Doctor Consultations
+* Marketplace Payments
+* Wellness Programs
+* Annual Plans
+* Corporate Subscriptions
+
+Use clean TypeScript architecture and scalable database design.
