@@ -43,7 +43,8 @@ export type Screen =
   | "payment-summary"
   | "payment-progress"
   | "congratulations"
-  | "logout-confirm";
+  | "logout-confirm"
+  | "health-report";
 
 interface CycleDay {
   date: number;

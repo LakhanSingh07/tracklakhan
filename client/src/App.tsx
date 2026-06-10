@@ -22,6 +22,7 @@ import { PhasePeriodScreen, PhaseGrowthScreen, PhaseReleaseScreen, PhaseProgeste
 import { EditPeriodScreen } from "@/pages/EditPeriodScreen";
 import { AICoachScreen } from "@/pages/AICoachScreen";
 import { InsightsScreen } from "@/pages/InsightsScreen";
+import { HealthReportScreen } from "@/pages/HealthReportScreen";
 import { PCOSScreen } from "@/pages/PCOSScreen";
 import {
   AccountScreen,
@@ -74,6 +75,7 @@ function AppRouter() {
     case "edit-period": return <EditPeriodScreen />;
     case "ai-coach": return <AICoachScreen />;
     case "insights": return <InsightsScreen />;
+    case "health-report": return <HealthReportScreen />;
     case "pcos": return <PCOSScreen />;
     case "account": return <AccountScreen />;
     case "personal-data": return <PersonalDataScreen />;

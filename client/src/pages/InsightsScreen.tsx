@@ -133,6 +133,32 @@ export const InsightsScreen = () => {
             </div>
           </div>
 
+          {/* Health Report CTA */}
+          <div className="px-5 mb-5">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("health-report")}
+              className="w-full rounded-3xl p-5 relative overflow-hidden shadow-md flex items-center gap-4"
+              style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #C026D3 50%, #EC4899 100%)" }}
+              data-testid="button-generate-health-report"
+            >
+              <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-white/10 -translate-y-4 translate-x-4" />
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0 relative z-10">
+                📋
+              </div>
+              <div className="flex-1 text-left relative z-10">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-white font-bold text-[15px]">AI Health Report</p>
+                  <span className="bg-yellow-300 text-yellow-900 text-[9px] font-bold px-2 py-0.5 rounded-full">NEW</span>
+                </div>
+                <p className="text-white/70 text-[12px]">Get your personalized PDF report + AI summary</p>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="flex-shrink-0 relative z-10">
+                <path d="M9 18L15 12L9 6" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+              </svg>
+            </motion.button>
+          </div>
+
           {/* AI Prediction shortcut card */}
           <div className="px-5 mb-5">
             <motion.button
