@@ -126,7 +126,18 @@ export const LogEntryScreen = () => {
 
           {/* Symptoms */}
           <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <h3 className="text-[14px] font-bold text-gray-800 mb-3">Symptoms</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-bold text-gray-800">Quick Symptoms</h3>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => navigate("symptom-tracker")}
+                className="flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, #FF8FA3, #FF657D)" }}
+                data-testid="button-detailed-symptoms"
+              >
+                Detailed →
+              </motion.button>
+            </div>
             <div className="flex flex-wrap gap-2">
               {symptoms.map(s => (
                 <motion.button
@@ -144,6 +155,15 @@ export const LogEntryScreen = () => {
                 </motion.button>
               ))}
             </div>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("symptom-tracker")}
+              className="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-[#FFD6E0] text-[12px] text-[#FF657D] font-medium flex items-center justify-center gap-2"
+              data-testid="button-full-symptom-tracker"
+            >
+              <span>🩺</span>
+              Open full symptom tracker (Physical · Emotional · Lifestyle)
+            </motion.button>
           </div>
 
           {/* Quick log shortcuts */}

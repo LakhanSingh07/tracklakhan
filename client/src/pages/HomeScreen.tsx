@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
 import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
+import { NotificationBell } from "@/pages/NotificationCenterScreen";
 
 const CycleCircle = ({ day, phase, daysUntil }: { day: number; phase: string; daysUntil: number }) => {
   const totalDays = 28;
@@ -81,6 +83,20 @@ const MoodButton = ({ emoji, label, color, onClick }: { emoji: string; label: st
 export const HomeScreen = () => {
   const { cycleData, user, navigate, logs } = useApp();
   const today = new Date();
+
+  const streak = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    const logDates = new Set(logs.map((l) => l.date));
+    let s = 0;
+    const check = new Date(d);
+    while (true) {
+      const ds = check.toISOString().split("T")[0];
+      if (logDates.has(ds)) { s++; check.setDate(check.getDate() - 1); }
+      else break;
+    }
+    return s;
+  }, [logs]);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
@@ -127,7 +143,6 @@ export const HomeScreen = () => {
               </motion.h1>
             </div>
             <div className="flex items-center gap-2">
-              {/* AI Coach shortcut */}
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("ai-coach")}
@@ -138,6 +153,7 @@ export const HomeScreen = () => {
                 <span className="text-sm">✨</span>
                 <span className="text-white text-[11px] font-bold">Ask AI</span>
               </motion.button>
+              <NotificationBell onPress={() => navigate("notifications")} />
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("personal-data")}
@@ -276,6 +292,90 @@ export const HomeScreen = () => {
                 </div>
               </div>
             </motion.div>
+          </div>
+
+          {/* Streak + Monthly snapshot row */}
+          <div className="px-5 mb-5">
+            <div className="flex gap-3">
+              {/* Streak card */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => navigate("log-entry")}
+                className="flex-1 rounded-2xl p-4 shadow-sm relative overflow-hidden"
+                style={{ background: streak >= 7 ? "linear-gradient(135deg, #F59E0B, #EF4444)" : "linear-gradient(135deg, #FFF7ED, #FEF3C7)" }}
+                data-testid="streak-card"
+              >
+                {streak >= 1 && (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute -top-3 -right-3 text-4xl opacity-20"
+                  >🔥</motion.div>
+                )}
+                <div className="text-2xl mb-1">🔥</div>
+                <div className={`text-[28px] font-bold leading-none ${streak >= 7 ? "text-white" : "text-[#F59E0B]"}`}
+                  style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                >
+                  {streak}
+                </div>
+                <div className={`text-[11px] font-semibold mt-0.5 ${streak >= 7 ? "text-white/80" : "text-[#D97706]"}`}>
+                  day streak
+                </div>
+                {streak === 0 && (
+                  <div className="text-[10px] text-gray-400 mt-0.5">Log today to start!</div>
+                )}
+                {streak >= 3 && streak < 7 && (
+                  <div className={`text-[9px] font-medium mt-1 text-[#D97706]`}>
+                    {7 - streak}d to 🔥 week
+                  </div>
+                )}
+                {streak >= 7 && (
+                  <div className="text-[9px] font-bold text-white/70 mt-1">🏆 On fire!</div>
+                )}
+              </motion.div>
+
+              {/* Monthly snapshot card */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => navigate("insights")}
+                className="flex-1 rounded-2xl p-4 shadow-sm"
+                style={{ background: "linear-gradient(135deg, #F5F0FF, #EDE9FE)" }}
+                data-testid="monthly-insights-card"
+              >
+                <div className="text-2xl mb-1">📊</div>
+                <div className="text-[28px] font-bold leading-none text-[#8B5CF6]"
+                  style={{ fontFamily: "Instrument Sans, sans-serif" }}
+                >
+                  {logs.length}
+                </div>
+                <div className="text-[11px] font-semibold text-[#7C3AED] mt-0.5">logs this month</div>
+                <div className="text-[9px] text-[#A78BFA] mt-1">
+                  {logs.length >= 10 ? "Great consistency!" : "Keep tracking!"}
+                </div>
+              </motion.div>
+
+              {/* Symptoms card */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.26 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => navigate("symptom-tracker")}
+                className="flex-1 rounded-2xl p-4 shadow-sm"
+                style={{ background: "linear-gradient(135deg, #FFF0F3, #FFE7EA)" }}
+                data-testid="symptoms-card"
+              >
+                <div className="text-2xl mb-1">🩺</div>
+                <div className="text-[12px] font-bold text-[#FF657D] leading-tight mt-1">Log Symptoms</div>
+                <div className="text-[9px] text-[#FF8FA3] mt-1 leading-tight">Track body & mood</div>
+              </motion.div>
+            </div>
           </div>
 
           {/* Quick stats grid */}

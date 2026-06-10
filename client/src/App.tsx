@@ -8,6 +8,8 @@ import { ElementSplashScreen } from "@/pages/ElementSplashScreen";
 import { OnboardingScreen } from "@/pages/OnboardingScreen";
 import { AuthSignUp, AuthSignIn, AuthOTP, AuthPassword, AuthSuccess } from "@/pages/AuthSignUp";
 import { ProfileSetupScreen, ProfilePreparingScreen } from "@/pages/ProfileSetupScreen";
+import { NotificationCenterScreen } from "@/pages/NotificationCenterScreen";
+import { SymptomTrackerScreen } from "@/pages/SymptomTrackerScreen";
 import { HomeScreen } from "@/pages/HomeScreen";
 import { CalendarScreen } from "@/pages/CalendarScreen";
 import { LogEntryScreen, LogWeightScreen, LogTemperatureScreen, LogWaterScreen } from "@/pages/LogEntryScreen";
@@ -50,6 +52,8 @@ function AppRouter() {
     case "auth-success": return <AuthSuccess />;
     case "profile-setup": return <ProfileSetupScreen />;
     case "profile-preparing": return <ProfilePreparingScreen />;
+    case "notifications": return <NotificationCenterScreen />;
+    case "symptom-tracker": return <SymptomTrackerScreen />;
     case "home": return <HomeScreen />;
     case "calendar": return <CalendarScreen />;
     case "log-entry": return <LogEntryScreen />;

@@ -11,6 +11,8 @@ export type Screen =
   | "auth-success"
   | "profile-setup"
   | "profile-preparing"
+  | "notifications"
+  | "symptom-tracker"
   | "home"
   | "calendar"
   | "log-entry"

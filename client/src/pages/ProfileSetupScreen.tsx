@@ -4,7 +4,7 @@ import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayou
 import { useApp } from "@/lib/appContext";
 import { ChevronLeft } from "lucide-react";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const ProgressDots = ({ current }: { current: number }) => (
   <div className="flex items-center gap-[6px]">
@@ -66,6 +66,7 @@ export const ProfileSetupScreen = () => {
   const [periodLength, setPeriodLength] = useState(5);
   const [cycleLength, setCycleLength] = useState(28);
   const [lastPeriodDate, setLastPeriodDate] = useState("");
+  const [hasPCOS, setHasPCOS] = useState<boolean | null>(null);
 
   const goNext = () => {
     setDir(1);
@@ -106,6 +107,7 @@ export const ProfileSetupScreen = () => {
     true,
     true,
     true,
+    true, // PCOS step — skip allowed
   ][step];
 
   return (
@@ -471,6 +473,69 @@ export const ProfileSetupScreen = () => {
                 <div className="bg-[#FFF5F7] rounded-2xl p-4 border border-[#FFE0E6]">
                   <p className="text-xs text-[#FF657D] font-medium">💡 Don't remember exactly? Your best estimate is fine — we'll refine predictions over time.</p>
                 </div>
+              </div>
+            )}
+
+            {/* Step 7: PCOS */}
+            {step === 7 && (
+              <div className="flex-1 flex flex-col">
+                <div className="mb-6">
+                  <div className="text-4xl mb-4">🩺</div>
+                  <h1 className="text-[26px] font-bold text-gray-900 leading-tight mb-2" style={{ fontFamily: "Instrument Sans, sans-serif" }}>
+                    PCOS Diagnosis
+                  </h1>
+                  <p className="text-[14px] text-gray-400 leading-relaxed">
+                    Have you ever been diagnosed with Polycystic Ovary Syndrome (PCOS)?
+                  </p>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  {[
+                    { value: true, label: "Yes, I have PCOS", icon: "🔴", desc: "FlowAI will enable PCOS-specific cycle tracking, predictions, and coaching." },
+                    { value: false, label: "No, I don't have PCOS", icon: "🟢", desc: "Standard cycle tracking with regular predictions and insights." },
+                  ].map((opt) => (
+                    <motion.button
+                      key={String(opt.value)}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setHasPCOS(opt.value)}
+                      data-testid={`pcos-option-${opt.value}`}
+                      className="w-full p-4 rounded-2xl border-2 text-left flex items-start gap-3 transition-all"
+                      style={{
+                        borderColor: hasPCOS === opt.value ? "#FF657D" : "#F0F0F0",
+                        background: hasPCOS === opt.value ? "#FFF0F3" : "white",
+                      }}
+                    >
+                      <span className="text-2xl flex-shrink-0 mt-0.5">{opt.icon}</span>
+                      <div>
+                        <p className="text-[15px] font-bold text-gray-900">{opt.label}</p>
+                        <p className="text-[12px] text-gray-400 mt-0.5 leading-relaxed">{opt.desc}</p>
+                      </div>
+                      {hasPCOS === opt.value && (
+                        <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-[#FF657D] flex items-center justify-center">
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl p-4 border border-[#DDD6FE]" style={{ background: "#F5F0FF" }}>
+                  <p className="text-xs text-[#7C3AED] font-medium leading-relaxed">
+                    🔒 <strong>Your health data is private.</strong> This helps us tailor predictions and advice — it's never shared with third parties.
+                  </p>
+                </div>
+
+                {hasPCOS === null && (
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleFinish}
+                    className="mt-4 text-[13px] text-gray-400 font-medium underline text-center w-full"
+                  >
+                    I'd rather not say — skip
+                  </motion.button>
+                )}
               </div>
             )}
           </motion.div>
