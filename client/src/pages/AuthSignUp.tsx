@@ -112,27 +112,46 @@ export const AuthSignUp = () => {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 200 }}
-            className="w-24 h-24 mb-6"
+            className="mb-6 flex flex-col items-center gap-3"
           >
-            <img src="/figmaAssets/image-1.png" alt="Flowly" className="w-full h-full object-contain" />
+            {/* New FlowAI logo */}
+            <div
+              className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg"
+              style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)" }}
+            >
+              <svg width="52" height="52" viewBox="0 0 60 60" fill="none">
+                <circle cx="30" cy="30" r="29" fill="rgba(255,255,255,0.15)" />
+                <path d="M12 30 Q18 20 24 28 Q30 36 36 26 Q42 16 50 24" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.6"/>
+                <path d="M10 36 Q16 26 22 34 Q28 42 34 32 Q40 22 48 30" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.35"/>
+                <path d="M30 13 L31.8 19.5 L38.5 21 L31.8 22.5 L30 29 L28.2 22.5 L21.5 21 L28.2 19.5 Z" fill="white" opacity="0.95"/>
+                <circle cx="20" cy="40" r="2.2" fill="white" opacity="0.55"/>
+                <circle cx="30" cy="44" r="1.8" fill="white" opacity="0.4"/>
+                <circle cx="40" cy="40" r="2.2" fill="white" opacity="0.55"/>
+              </svg>
+            </div>
+            <div className="flex items-baseline gap-0.5">
+              <span className="font-bold text-[26px]" style={{ fontFamily: "Instrument Sans, sans-serif", background: "linear-gradient(135deg, #8B5CF6, #EC4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Flow</span>
+              <span className="font-extrabold text-[26px]" style={{ fontFamily: "Instrument Sans, sans-serif", background: "linear-gradient(135deg, #EC4899, #8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>AI</span>
+              <span className="ml-1 text-sm">✨</span>
+            </div>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-[30px] font-bold text-gray-900 text-center mb-2"
+            className="text-[26px] font-bold text-gray-900 text-center mb-2"
             style={{ fontFamily: "Instrument Sans, sans-serif" }}
           >
-            Welcome to Flowly
+            Welcome to FlowAI
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-gray-500 text-center text-[14px] px-8 mb-10 leading-relaxed"
+            className="text-gray-500 text-center text-[13px] px-8 mb-10 leading-relaxed"
           >
-            Your personal period tracker for a healthier, happier you
+            Know Your Cycle. Own Your Health. Powered by AI ✨
           </motion.p>
 
           <motion.div
