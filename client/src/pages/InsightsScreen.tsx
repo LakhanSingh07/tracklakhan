@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
 import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
+import { computeCyclePrediction } from "@/lib/cyclePrediction";
 
 const WellnessRing = ({ score, label, color }: { score: number; label: string; color: string }) => {
   const r = 36;
@@ -62,7 +64,11 @@ const MoodTag = ({ mood, pct, color }: { mood: string; pct: number; color: strin
 );
 
 export const InsightsScreen = () => {
-  const { navigate, cycleData } = useApp();
+  const { navigate, cycleData, logs } = useApp();
+  const prediction = useMemo(
+    () => computeCyclePrediction(logs, cycleData.cycleLength, cycleData.periodLength, cycleData.lastPeriodStart),
+    [logs, cycleData]
+  );
 
   const tips = [
     { icon: "🧘‍♀️", title: "Try gentle yoga", desc: "Reduces period cramps by 30%", color: "#8B5CF6", bg: "#F5F0FF" },
@@ -125,6 +131,43 @@ export const InsightsScreen = () => {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* AI Prediction shortcut card */}
+          <div className="px-5 mb-5">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("prediction")}
+              className="w-full rounded-2xl p-4 flex items-center gap-3 shadow-sm"
+              style={{ background: "linear-gradient(135deg, #F5F0FF 0%, #FDF2F8 100%)", border: "1.5px solid #DDD6FE" }}
+              data-testid="button-ai-prediction-insights"
+            >
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}
+              >
+                🧠
+              </div>
+              <div className="flex-1 text-left">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className="text-[13px] font-bold text-gray-900">AI Cycle Predictions</p>
+                  <span
+                    className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white"
+                    style={{ background: prediction.usingAI ? "#8B5CF6" : "#9CA3AF" }}
+                  >
+                    {prediction.usingAI ? `${prediction.confidence}% confidence` : "Start training"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">
+                  {prediction.usingAI
+                    ? `${prediction.cycleHistory.length} cycles analyzed · avg ${prediction.averageCycleLength}d`
+                    : "Log periods to activate AI predictions"}
+                </p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
+                <path d="M9 18L15 12L9 6" stroke="#8B5CF6" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+            </motion.button>
           </div>
 
           {/* Mini wellness rings */}

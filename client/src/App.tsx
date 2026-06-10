@@ -10,6 +10,7 @@ import { AuthSignUp, AuthSignIn, AuthOTP, AuthPassword, AuthSuccess } from "@/pa
 import { ProfileSetupScreen, ProfilePreparingScreen } from "@/pages/ProfileSetupScreen";
 import { NotificationCenterScreen } from "@/pages/NotificationCenterScreen";
 import { SymptomTrackerScreen } from "@/pages/SymptomTrackerScreen";
+import { PredictionScreen } from "@/pages/PredictionScreen";
 import { HomeScreen } from "@/pages/HomeScreen";
 import { CalendarScreen } from "@/pages/CalendarScreen";
 import { LogEntryScreen, LogWeightScreen, LogTemperatureScreen, LogWaterScreen } from "@/pages/LogEntryScreen";
@@ -54,6 +55,7 @@ function AppRouter() {
     case "profile-preparing": return <ProfilePreparingScreen />;
     case "notifications": return <NotificationCenterScreen />;
     case "symptom-tracker": return <SymptomTrackerScreen />;
+    case "prediction": return <PredictionScreen />;
     case "home": return <HomeScreen />;
     case "calendar": return <CalendarScreen />;
     case "log-entry": return <LogEntryScreen />;

@@ -4,6 +4,7 @@ import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayou
 import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
 import { NotificationBell } from "@/pages/NotificationCenterScreen";
+import { computeCyclePrediction } from "@/lib/cyclePrediction";
 
 const CycleCircle = ({ day, phase, daysUntil }: { day: number; phase: string; daysUntil: number }) => {
   const totalDays = 28;
@@ -97,6 +98,12 @@ export const HomeScreen = () => {
     }
     return s;
   }, [logs]);
+
+  const prediction = useMemo(
+    () => computeCyclePrediction(logs, cycleData.cycleLength, cycleData.periodLength, cycleData.lastPeriodStart),
+    [logs, cycleData]
+  );
+  const aiDaysUntil = Math.ceil((prediction.nextPeriodDate.getTime() - today.getTime()) / 86400000);
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
@@ -108,9 +115,9 @@ export const HomeScreen = () => {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const quickStats = [
-    { label: "Cycle Length", value: "28", unit: "days", icon: "🔄", color: "#FF657D", bg: "#FFF0F3" },
-    { label: "Period Length", value: "5", unit: "days", icon: "📍", color: "#8B5CF6", bg: "#F5F0FF" },
-    { label: "Next Period", value: String(cycleData.daysUntilNextPeriod), unit: "days", icon: "📅", color: "#60A5FA", bg: "#EFF6FF" },
+    { label: "Cycle Length", value: String(Math.round(prediction.averageCycleLength)), unit: "days", icon: "🔄", color: "#FF657D", bg: "#FFF0F3" },
+    { label: "Period Length", value: String(Math.round(prediction.averagePeriodLength)), unit: "days", icon: "📍", color: "#8B5CF6", bg: "#F5F0FF" },
+    { label: prediction.usingAI ? "AI Next Period" : "Next Period", value: String(Math.max(0, aiDaysUntil)), unit: "days", icon: prediction.usingAI ? "🧠" : "📅", color: "#60A5FA", bg: "#EFF6FF" },
     { label: "Water Today", value: "1.5", unit: "L", icon: "💧", color: "#34D399", bg: "#ECFDF5" },
   ];
 
@@ -432,14 +439,49 @@ export const HomeScreen = () => {
             </motion.div>
           </div>
 
+          {/* AI Prediction banner (show when AI is active) */}
+          {prediction.usingAI && (
+            <div className="px-5 mb-5">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate("prediction")}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full rounded-2xl p-4 flex items-center gap-3 shadow-sm relative overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #F5F0FF 0%, #FDF2F8 100%)", border: "1.5px solid #DDD6FE" }}
+                data-testid="button-ai-prediction-banner"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>
+                  <span className="text-white text-lg">🧠</span>
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <p className="text-[13px] font-bold text-gray-900">AI Prediction Active</p>
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ background: "#8B5CF6" }}>
+                      {prediction.confidence}% confidence
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 truncate">
+                    Next period: {prediction.nextPeriodDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {prediction.cycleHistory.length} cycles analyzed
+                  </p>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
+                  <path d="M9 18L15 12L9 6" stroke="#8B5CF6" strokeWidth="2.2" strokeLinecap="round"/>
+                </svg>
+              </motion.button>
+            </div>
+          )}
+
           {/* Feature shortcuts row */}
           <div className="px-5 mb-5">
             <h2 className="text-[15px] font-bold text-gray-800 mb-3">Quick Access</h2>
             <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
               {[
-                { icon: "🩺", label: "PCOS Check", color: "#8B5CF6", bg: "#F5F0FF", screen: "pcos" as const },
+                { icon: "🧠", label: "AI Predict", color: "#8B5CF6", bg: "#F5F0FF", screen: "prediction" as const },
+                { icon: "🩺", label: "PCOS Check", color: "#EC4899", bg: "#FDF2F8", screen: "pcos" as const },
                 { icon: "🥚", label: "Fertility", color: "#60A5FA", bg: "#EFF6FF", screen: "premium" as const },
-                { icon: "📊", label: "My Cycles", color: "#EC4899", bg: "#FDF2F8", screen: "cycles" as const },
+                { icon: "📊", label: "My Cycles", color: "#FF657D", bg: "#FFF0F3", screen: "cycles" as const },
                 { icon: "🌡️", label: "Temperature", color: "#F59E0B", bg: "#FFFBEB", screen: "log-temperature" as const },
                 { icon: "⚖️", label: "Weight", color: "#34D399", bg: "#ECFDF5", screen: "log-weight" as const },
               ].map(item => (

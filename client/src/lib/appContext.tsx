@@ -13,6 +13,7 @@ export type Screen =
   | "profile-preparing"
   | "notifications"
   | "symptom-tracker"
+  | "prediction"
   | "home"
   | "calendar"
   | "log-entry"
