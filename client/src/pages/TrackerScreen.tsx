@@ -14,17 +14,20 @@ export const TrackerScreen = () => {
   ];
 
   const phaseCards = [
-    { phase: "Menstrual", screen: "phase-period" as const, color: "#FF657D", bg: "#FFF0F3", icon: "🩸", days: "Day 1-5", desc: "Rest & recover" },
+    { phase: "Menstrual", screen: "phase-period" as const, color: "#8B0000", bg: "#FFF5F5", icon: "🩸", days: `Day 1–${cycleData.periodLength}`, desc: "Rest & recover" },
     { phase: "Follicular", screen: "phase-growth" as const, color: "#60A5FA", bg: "#EFF6FF", icon: "🌱", days: "Day 6-13", desc: "Energy rising" },
     { phase: "Ovulation", screen: "phase-release" as const, color: "#A78BFA", bg: "#F5F0FF", icon: "⭐", days: "Day 14", desc: "Peak fertility" },
     { phase: "Luteal", screen: "phase-progesterone" as const, color: "#F59E0B", bg: "#FFFBEB", icon: "🌙", days: "Day 15-28", desc: "Wind down" },
   ];
 
+  const pLen = cycleData.periodLength;
+  const cLen = cycleData.cycleLength;
+  const ovDay = Math.round(cLen / 2);
   const currentPhaseIndex = phaseCards.findIndex(p =>
-    (cycleData.currentDay <= 5 && p.phase === "Menstrual") ||
-    (cycleData.currentDay >= 6 && cycleData.currentDay <= 13 && p.phase === "Follicular") ||
-    (cycleData.currentDay === 14 && p.phase === "Ovulation") ||
-    (cycleData.currentDay > 14 && p.phase === "Luteal")
+    (cycleData.currentDay <= pLen && p.phase === "Menstrual") ||
+    (cycleData.currentDay > pLen && cycleData.currentDay < ovDay - 1 && p.phase === "Follicular") ||
+    (cycleData.currentDay >= ovDay - 1 && cycleData.currentDay <= ovDay + 1 && p.phase === "Ovulation") ||
+    (cycleData.currentDay > ovDay + 1 && p.phase === "Luteal")
   );
 
   return (
@@ -75,14 +78,15 @@ export const TrackerScreen = () => {
           <div className="mx-5 bg-white rounded-3xl p-5 shadow-sm mb-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[15px] font-bold text-gray-800">Period Duration</h3>
-              <span className="text-[#FF657D] text-sm font-semibold">{cycleData.periodLength} days avg</span>
+              <span className="text-sm font-semibold" style={{ color: "#8B0000" }}>{cycleData.periodLength} days avg</span>
             </div>
             <div className="flex gap-1.5">
-              {Array.from({ length: 28 }, (_, i) => {
+              {Array.from({ length: cycleData.cycleLength }, (_, i) => {
                 const day = i + 1;
-                const isPeriod = day <= 5;
-                const isFertile = day >= 11 && day <= 15;
-                const isOvulation = day === 14;
+                const ovulationDay = Math.round(cycleData.cycleLength / 2);
+                const isPeriod = day <= cycleData.periodLength;
+                const isFertile = day >= ovulationDay - 2 && day <= ovulationDay + 2;
+                const isOvulation = day === ovulationDay;
                 const isCurrent = day === cycleData.currentDay;
                 return (
                   <motion.div
@@ -93,9 +97,9 @@ export const TrackerScreen = () => {
                     className="flex-1 rounded-sm"
                     style={{
                       height: 32,
-                      background: isCurrent ? "#FF657D" : isOvulation ? "#A78BFA" : isFertile ? "#A78BFA44" : isPeriod ? "#FF657D88" : "#F3F4F6",
+                      background: isCurrent ? "#8B0000" : isOvulation ? "#A78BFA" : isFertile ? "#A78BFA44" : isPeriod ? "#8B000077" : "#F3F4F6",
                       transformOrigin: "bottom",
-                      border: isCurrent ? "2px solid #FF657D" : "none",
+                      border: isCurrent ? "2px solid #8B0000" : "none",
                     }}
                   />
                 );

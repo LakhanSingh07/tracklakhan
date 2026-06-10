@@ -63,19 +63,115 @@ const MoodTag = ({ mood, pct, color }: { mood: string; pct: number; color: strin
   </motion.div>
 );
 
+const dateStr = (daysAgo: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split("T")[0];
+};
+
 export const InsightsScreen = () => {
-  const { navigate, cycleData, logs } = useApp();
+  const { navigate, cycleData, logs, waterLogs, waterGoal, sleepLogs, sleepGoal, stepsLogs, stepsGoal } = useApp();
   const prediction = useMemo(
     () => computeCyclePrediction(logs, cycleData.cycleLength, cycleData.periodLength, cycleData.lastPeriodStart),
     [logs, cycleData]
   );
 
-  const tips = [
+  const { cycleScore, moodScore, hydrationScore, sleepScore, wellnessScore, moodTrends, wellnessLabel, cycleStatus, moodStatus, sleepStatus, avgWaterL } = useMemo(() => {
+    const since7 = dateStr(7);
+    const since30 = dateStr(30);
+
+    // Cycle health
+    const cycleScore = prediction.usingAI
+      ? Math.min(95, prediction.confidence)
+      : Math.min(80, 30 + logs.length * 5);
+
+    // Mood score from last 30 days logs
+    const recent = logs.filter(l => l.date >= since30);
+    const positiveMoods = ["😊", "😄", "🤗", "😌"];
+    const negativeMoods = ["😰", "😢", "😤"];
+    const moodTotal = recent.reduce((s, l) => {
+      if (!l.mood) return s + 65;
+      if (positiveMoods.includes(l.mood)) return s + 90;
+      if (negativeMoods.includes(l.mood)) return s + 35;
+      return s + 60;
+    }, 0);
+    const moodScore = recent.length > 0 ? Math.round(moodTotal / recent.length) : 65;
+
+    // Hydration from last 7 days waterLogs
+    const recentWater = waterLogs.filter(l => l.date >= since7);
+    const avgWater = recentWater.length > 0
+      ? recentWater.reduce((s, l) => s + (l.amount ?? 0), 0) / recentWater.length
+      : 0;
+    const hydrationScore = Math.min(100, Math.round((avgWater / waterGoal) * 100));
+    const avgWaterL = recentWater.length > 0 ? (avgWater / 1000).toFixed(1) : null;
+
+    // Sleep from last 7 days sleepLogs
+    const recentSleep = sleepLogs.filter(l => l.date >= since7);
+    const avgSleep = recentSleep.length > 0
+      ? recentSleep.reduce((s, l) => s + l.duration, 0) / recentSleep.length
+      : 0;
+    const sleepScore = Math.min(100, Math.round((avgSleep / (sleepGoal * 60)) * 100));
+
+    const wellnessScore = Math.round((cycleScore + moodScore + hydrationScore + sleepScore) / 4);
+
+    const wellnessLabel = wellnessScore >= 80 ? "Excellent 🌟" : wellnessScore >= 65 ? "Good — keep it up! 🌸" : wellnessScore >= 50 ? "Fair — room to grow 🌱" : "Needs attention 💙";
+
+    // Cycle status
+    const cycleStatus = prediction.usingAI && cycleScore >= 70 ? "Regular" : logs.length < 3 ? "Learning" : "Tracking";
+    const moodStatus = moodScore >= 70 ? "Stable" : moodScore >= 50 ? "Mixed" : "Low";
+    const sleepStatus = sleepScore >= 70 ? "Good" : sleepScore >= 40 ? "Fair" : "Low";
+
+    // Mood breakdown from last 30 days
+    const moodEmojis = ["😊", "😌", "😤", "😢", "😰", "😴", "😄", "🤗"];
+    const moodColors = ["#EC4899", "#8B5CF6", "#F59E0B", "#60A5FA", "#34D399", "#F97316", "#EC4899", "#A78BFA"];
+    const moodCounts: Record<string, number> = {};
+    recent.forEach(l => { if (l.mood) moodCounts[l.mood] = (moodCounts[l.mood] || 0) + 1; });
+    const total = Math.max(1, Object.values(moodCounts).reduce((a, b) => a + b, 0));
+
+    let moodTrends = moodEmojis
+      .map((m, i) => ({ mood: m, pct: Math.round(((moodCounts[m] || 0) / total) * 100), color: moodColors[i] }))
+      .filter(m => m.pct > 0)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 6);
+
+    if (moodTrends.length === 0) {
+      moodTrends = [
+        { mood: "😊", pct: 40, color: "#EC4899" },
+        { mood: "😌", pct: 25, color: "#8B5CF6" },
+        { mood: "😴", pct: 20, color: "#F97316" },
+        { mood: "😢", pct: 15, color: "#60A5FA" },
+      ];
+    }
+
+    return { cycleScore, moodScore, hydrationScore, sleepScore, wellnessScore, moodTrends, wellnessLabel, cycleStatus, moodStatus, sleepStatus, avgWaterL };
+  }, [prediction, logs, waterLogs, waterGoal, sleepLogs, sleepGoal, stepsLogs, stepsGoal]);
+
+  // Symptom frequency from flow logs
+  const symptomData = useMemo(() => {
+    const recent30 = logs.filter(l => l.date >= dateStr(30));
+    const heavyCount = recent30.filter(l => l.flow === "heavy").length;
+    const medHeavyCount = recent30.filter(l => l.flow === "medium" || l.flow === "heavy").length;
+    const total = Math.max(1, recent30.length);
+    return [
+      { label: "Cramps (heavy flow days)", value: heavyCount, max: Math.max(heavyCount, 5), color: "#EC4899", icon: "😣" },
+      { label: "Bloating (medium+ flow)", value: medHeavyCount, max: Math.max(medHeavyCount, 8), color: "#8B5CF6", icon: "🤰" },
+      { label: "Logged days (30d)", value: recent30.length, max: 30, color: "#F59E0B", icon: "📅" },
+      { label: "Period days logged", value: recent30.filter(l => l.flow && l.flow !== "none").length, max: Math.max(1, recent30.filter(l => l.flow && l.flow !== "none").length || 5), color: "#60A5FA", icon: "🩸" },
+    ];
+  }, [logs]);
+
+  const tips = useMemo(() => [
     { icon: "🧘‍♀️", title: "Try gentle yoga", desc: "Reduces period cramps by 30%", color: "#8B5CF6", bg: "#F5F0FF" },
-    { icon: "💧", title: "Drink more water", desc: "You averaged only 1.2L this week", color: "#60A5FA", bg: "#EFF6FF" },
-    { icon: "🌙", title: "Improve sleep", desc: "Aim for 7–8 hrs to balance hormones", color: "#EC4899", bg: "#FDF2F8" },
-    { icon: "🥗", title: "Iron-rich diet", desc: "You're in the menstrual phase", color: "#34D399", bg: "#ECFDF5" },
-  ];
+    {
+      icon: "💧", title: "Stay hydrated",
+      desc: avgWaterL
+        ? `You averaged ${avgWaterL}L/day this week${parseFloat(avgWaterL) >= waterGoal / 1000 ? " — goal met! 🎉" : ` — ${((waterGoal - parseFloat(avgWaterL) * 1000) / 1000).toFixed(1)}L below goal`}`
+        : "Aim for 2–3L daily for hormone balance",
+      color: "#60A5FA", bg: "#EFF6FF"
+    },
+    { icon: "🌙", title: "Improve sleep", desc: sleepScore < 70 ? "You're averaging below your sleep goal" : "Sleep score looking good — keep it up!", color: "#EC4899", bg: "#FDF2F8" },
+    { icon: "🥗", title: "Iron-rich diet", desc: cycleData.currentDay <= cycleData.periodLength ? "You're in the menstrual phase — eat iron-rich foods" : "Support your cycle with leafy greens & legumes", color: "#34D399", bg: "#ECFDF5" },
+  ], [avgWaterL, waterGoal, sleepScore, cycleData]);
 
   return (
     <MobileLayout gradient="linear-gradient(180deg, #FAF5FF 0%, #FFF0F4 100%)">
@@ -96,8 +192,8 @@ export const InsightsScreen = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-white/70 text-[12px] font-medium">Overall Wellness</p>
-                <p className="text-white text-[28px] font-bold leading-none">78<span className="text-base font-medium">/100</span></p>
-                <p className="text-white/60 text-[11px] mt-0.5">Good — keep it up! 🌸</p>
+                <p className="text-white text-[28px] font-bold leading-none">{wellnessScore}<span className="text-base font-medium">/100</span></p>
+                <p className="text-white/60 text-[11px] mt-0.5">{wellnessLabel}</p>
               </div>
               <div className="relative w-20 h-20">
                 <svg width="80" height="80" className="absolute inset-0">
@@ -108,7 +204,7 @@ export const InsightsScreen = () => {
                     strokeLinecap="round"
                     strokeDasharray={2 * Math.PI * 36}
                     initial={{ strokeDashoffset: 2 * Math.PI * 36 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 36 * (1 - 0.78) }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 36 * (1 - wellnessScore / 100) }}
                     transition={{ duration: 1.4, ease: "easeOut" }}
                     transform="rotate(-90 40 40)"
                   />
@@ -120,9 +216,9 @@ export const InsightsScreen = () => {
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: "Cycle", val: "Regular", ok: true },
-                { label: "Mood", val: "Stable", ok: true },
-                { label: "Sleep", val: "Low", ok: false },
+                { label: "Cycle", val: cycleStatus, ok: cycleStatus !== "Learning" },
+                { label: "Mood", val: moodStatus, ok: moodStatus === "Stable" },
+                { label: "Sleep", val: sleepStatus, ok: sleepStatus === "Good" },
               ].map(item => (
                 <div key={item.label} className="bg-white/15 rounded-xl p-2.5 text-center">
                   <span className="text-base">{item.ok ? "✅" : "⚠️"}</span>
@@ -143,9 +239,7 @@ export const InsightsScreen = () => {
               data-testid="button-generate-health-report"
             >
               <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-white/10 -translate-y-4 translate-x-4" />
-              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0 relative z-10">
-                📋
-              </div>
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl flex-shrink-0 relative z-10">📋</div>
               <div className="flex-1 text-left relative z-10">
                 <div className="flex items-center gap-2 mb-0.5">
                   <p className="text-white font-bold text-[15px]">AI Health Report</p>
@@ -168,19 +262,13 @@ export const InsightsScreen = () => {
               style={{ background: "linear-gradient(135deg, #F5F0FF 0%, #FDF2F8 100%)", border: "1.5px solid #DDD6FE" }}
               data-testid="button-ai-prediction-insights"
             >
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}
-              >
-                🧠
-              </div>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                style={{ background: "linear-gradient(135deg, #8B5CF6, #EC4899)" }}>🧠</div>
               <div className="flex-1 text-left">
                 <div className="flex items-center gap-2 mb-0.5">
                   <p className="text-[13px] font-bold text-gray-900">AI Cycle Predictions</p>
-                  <span
-                    className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white"
-                    style={{ background: prediction.usingAI ? "#8B5CF6" : "#9CA3AF" }}
-                  >
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white"
+                    style={{ background: prediction.usingAI ? "#8B5CF6" : "#9CA3AF" }}>
                     {prediction.usingAI ? `${prediction.confidence}% confidence` : "Start training"}
                   </span>
                 </div>
@@ -196,46 +284,39 @@ export const InsightsScreen = () => {
             </motion.button>
           </div>
 
-          {/* Mini wellness rings */}
+          {/* Mini wellness rings — computed from real data */}
           <div className="mx-5 mb-5 bg-white rounded-3xl p-5 shadow-sm">
             <h2 className="text-[15px] font-bold text-gray-800 mb-4">Health Scores</h2>
             <div className="flex justify-between">
-              <WellnessRing score={85} label="Cycle Health" color="#EC4899" />
-              <WellnessRing score={70} label="Mood Score" color="#8B5CF6" />
-              <WellnessRing score={60} label="Hydration" color="#60A5FA" />
-              <WellnessRing score={72} label="Sleep" color="#34D399" />
+              <WellnessRing score={Math.round(cycleScore)} label="Cycle Health" color="#EC4899" />
+              <WellnessRing score={moodScore} label="Mood Score" color="#8B5CF6" />
+              <WellnessRing score={hydrationScore} label="Hydration" color="#60A5FA" />
+              <WellnessRing score={sleepScore} label="Sleep" color="#34D399" />
             </div>
           </div>
 
-          {/* Mood trends */}
+          {/* Mood trends from real logs */}
           <div className="mx-5 mb-5 bg-white rounded-3xl p-5 shadow-sm">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-[15px] font-bold text-gray-800">Mood This Month</h2>
-              <span className="text-xs text-purple-500 font-medium">View all →</span>
+              <span className="text-xs text-purple-500 font-medium">{logs.filter(l => l.date >= dateStr(30) && l.mood).length} logs</span>
             </div>
             <div className="flex items-end justify-around gap-2 h-16">
-              <MoodTag mood="😊" pct={42} color="#EC4899" />
-              <MoodTag mood="😌" pct={28} color="#8B5CF6" />
-              <MoodTag mood="😤" pct={12} color="#F59E0B" />
-              <MoodTag mood="😢" pct={8} color="#60A5FA" />
-              <MoodTag mood="😰" pct={6} color="#34D399" />
-              <MoodTag mood="⚡" pct={4} color="#F97316" />
+              {moodTrends.map(m => <MoodTag key={m.mood} mood={m.mood} pct={m.pct} color={m.color} />)}
             </div>
           </div>
 
-          {/* Symptom tracking */}
+          {/* Symptom frequency from flow logs */}
           <div className="mx-5 mb-5 bg-white rounded-3xl p-5 shadow-sm">
-            <h2 className="text-[15px] font-bold text-gray-800 mb-4">Symptom Frequency</h2>
+            <h2 className="text-[15px] font-bold text-gray-800 mb-4">Cycle Log Summary</h2>
             <div className="space-y-3.5">
-              <TrendBar label="Cramps" value={8} max={10} color="#EC4899" icon="😣" />
-              <TrendBar label="Bloating" value={6} max={10} color="#8B5CF6" icon="🤰" />
-              <TrendBar label="Fatigue" value={7} max={10} color="#F59E0B" icon="😴" />
-              <TrendBar label="Headache" value={3} max={10} color="#60A5FA" icon="🤕" />
-              <TrendBar label="Acne" value={4} max={10} color="#34D399" icon="😕" />
+              {symptomData.map(s => (
+                <TrendBar key={s.label} label={s.label} value={s.value} max={s.max} color={s.color} icon={s.icon} />
+              ))}
             </div>
           </div>
 
-          {/* AI Tips */}
+          {/* AI Tips — context-aware */}
           <div className="px-5 mb-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-[15px] font-bold text-gray-800">AI Recommendations</h2>

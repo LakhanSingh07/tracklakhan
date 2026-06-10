@@ -380,8 +380,8 @@ export const LogTemperatureScreen = () => {
 };
 
 export const LogWaterScreen = () => {
-  const { navigate, todayWater, setTodayWater } = useApp();
-  const goal = 2000;
+  const { navigate, todayWater, setTodayWater, waterGoal } = useApp();
+  const goal = waterGoal;
   const cups = [200, 250, 300, 350, 500];
   const [selectedCup, setSelectedCup] = useState(250);
 

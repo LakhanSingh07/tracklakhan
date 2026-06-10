@@ -9,25 +9,26 @@ const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 type DayType = "period" | "fertile" | "ovulation" | "normal" | "future-period";
 
-const getDayType = (date: Date, lastPeriod: Date): DayType => {
+const getDayType = (date: Date, lastPeriod: Date, cycleLength: number, periodLength: number): DayType => {
   const diff = Math.floor((date.getTime() - lastPeriod.getTime()) / (1000 * 60 * 60 * 24));
-  const dayInCycle = ((diff % 28) + 28) % 28;
-  if (dayInCycle < 5) return "period";
-  if (dayInCycle >= 11 && dayInCycle <= 15) return "fertile";
-  if (dayInCycle === 13) return "ovulation";
+  const dayInCycle = ((diff % cycleLength) + cycleLength) % cycleLength;
+  const ovulationDay = Math.round(cycleLength / 2) - 1;
+  if (dayInCycle < periodLength) return "period";
+  if (dayInCycle === ovulationDay) return "ovulation";
+  if (dayInCycle >= ovulationDay - 2 && dayInCycle <= ovulationDay + 2) return "fertile";
   return "normal";
 };
 
 const dayColors: Record<DayType, { bg: string; text: string; dot?: string }> = {
-  period: { bg: "#FF657D", text: "white", dot: "#FF657D" },
+  period: { bg: "#8B0000", text: "white", dot: "#8B0000" },
   fertile: { bg: "#A78BFA22", text: "#A78BFA", dot: "#A78BFA" },
   ovulation: { bg: "#A78BFA", text: "white", dot: "#A78BFA" },
   normal: { bg: "transparent", text: "#1F2937" },
-  "future-period": { bg: "#FFE7EA", text: "#FF657D", dot: "#FF657D" },
+  "future-period": { bg: "#FFEAEA", text: "#8B0000", dot: "#8B0000" },
 };
 
 export const CalendarScreen = () => {
-  const { cycleData, navigate, selectedDate, setSelectedDate } = useApp();
+  const { cycleData, navigate, selectedDate, setSelectedDate, logs } = useApp();
   const [viewDate, setViewDate] = useState(new Date());
   const today = new Date();
 
@@ -43,19 +44,18 @@ export const CalendarScreen = () => {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const phaseInfo = {
-    period: { label: "Period", color: "#FF657D", icon: "🩸" },
+    period: { label: "Period", color: "#8B0000", icon: "🩸" },
     fertile: { label: "Fertile Window", color: "#A78BFA", icon: "🌱" },
     ovulation: { label: "Ovulation", color: "#A78BFA", icon: "⭐" },
     normal: { label: "Normal", color: "#9CA3AF", icon: "○" },
   };
 
-  const selectedLog = {
-    flow: "medium" as const,
-    mood: "😊",
-    weight: 58,
-    temperature: 36.5,
-    water: 1800,
-  };
+  const dateStr = selectedDate.toISOString().split("T")[0];
+  const logForDate = logs.find(l => l.date === dateStr);
+  const cycleDay = (() => {
+    const diff = Math.floor((selectedDate.getTime() - cycleData.lastPeriodStart.getTime()) / (1000 * 60 * 60 * 24));
+    return ((diff % cycleData.cycleLength) + cycleData.cycleLength) % cycleData.cycleLength + 1;
+  })();
 
   return (
     <MobileLayout gradient="linear-gradient(180deg, #F9F9F9 0%, #FFE7EA 100%)">
@@ -111,7 +111,7 @@ export const CalendarScreen = () => {
                   const date = new Date(year, month, day);
                   const isToday = date.toDateString() === today.toDateString();
                   const isSelected = date.toDateString() === selectedDate.toDateString();
-                  const dtype = getDayType(date, cycleData.lastPeriodStart);
+                  const dtype = getDayType(date, cycleData.lastPeriodStart, cycleData.cycleLength, cycleData.periodLength);
                   const colors = dayColors[dtype];
                   const isFuture = date > today;
 
@@ -125,9 +125,9 @@ export const CalendarScreen = () => {
                       <div
                         className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold relative"
                         style={{
-                          background: isSelected ? "#FF657D" : isToday ? "#FFF0F3" : dtype !== "normal" ? colors.bg : "transparent",
-                          color: isSelected ? "white" : isToday ? "#FF657D" : isFuture ? "#9CA3AF" : colors.text,
-                          border: isToday && !isSelected ? "2px solid #FF657D" : "none",
+                          background: isSelected ? "#8B0000" : isToday ? "#FFF5F5" : dtype !== "normal" ? colors.bg : "transparent",
+                          color: isSelected ? "white" : isToday ? "#8B0000" : isFuture ? "#9CA3AF" : colors.text,
+                          border: isToday && !isSelected ? "2px solid #8B0000" : "none",
                         }}
                       >
                         {day}
@@ -159,8 +159,8 @@ export const CalendarScreen = () => {
                 <h3 className="text-[16px] font-bold text-gray-900">
                   {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                 </h3>
-                <p className="text-sm text-[#FF657D]">
-                  Day {Math.floor((selectedDate.getTime() - cycleData.lastPeriodStart.getTime()) / (1000 * 60 * 60 * 24)) % 28 + 1} of cycle
+                <p className="text-sm font-medium" style={{ color: "#8B0000" }}>
+                  Day {cycleDay} of cycle
                 </p>
               </div>
               <motion.button
@@ -173,21 +173,35 @@ export const CalendarScreen = () => {
               </motion.button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Flow", value: selectedLog.flow, icon: "🩸", color: "#FF657D" },
-                { label: "Mood", value: selectedLog.mood, icon: "", color: "#A78BFA" },
-                { label: "Weight", value: `${selectedLog.weight} kg`, icon: "⚖️", color: "#60A5FA" },
-                { label: "Temp", value: `${selectedLog.temperature}°C`, icon: "🌡️", color: "#F59E0B" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl p-3 bg-gray-50">
-                  <div className="text-[11px] text-gray-400 mb-1">{item.label}</div>
-                  <div className="text-[15px] font-bold" style={{ color: item.color }}>
-                    {item.icon} {item.value}
+            {logForDate ? (
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Flow", value: logForDate.flow ?? "—", icon: "🩸", color: "#8B0000" },
+                  { label: "Mood", value: logForDate.mood ?? "—", icon: "", color: "#A78BFA" },
+                  { label: "Notes", value: logForDate.notes ? logForDate.notes.substring(0, 20) + (logForDate.notes.length > 20 ? "…" : "") : "—", icon: "📝", color: "#60A5FA" },
+                  { label: "Logged", value: "✓", icon: "✅", color: "#34D399" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl p-3 bg-gray-50">
+                    <div className="text-[11px] text-gray-400 mb-1">{item.label}</div>
+                    <div className="text-[15px] font-bold" style={{ color: item.color }}>
+                      {item.icon} {item.value}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl p-4 bg-gray-50 text-center">
+                <p className="text-[13px] text-gray-400 mb-2">No log for this day yet</p>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("log-entry")}
+                  className="text-[13px] font-semibold"
+                  style={{ color: "#8B0000" }}
+                >
+                  + Add log
+                </motion.button>
+              </div>
+            )}
           </div>
 
           {/* Edit cycle button */}
@@ -195,11 +209,12 @@ export const CalendarScreen = () => {
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={() => navigate("edit-period")}
-              className="w-full py-4 rounded-2xl border-2 border-[#FF657D] flex items-center justify-center gap-2 text-[#FF657D] font-semibold"
+              className="w-full py-4 rounded-2xl border-2 flex items-center justify-center gap-2 font-semibold"
+              style={{ borderColor: "#8B0000", color: "#8B0000" }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M11 4H4C3.4 4 3 4.4 3 5V20C3 20.6 3.4 21 4 21H19C19.6 21 20 20.6 20 20V13" stroke="#FF657D" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M18.5 2.5L21.5 5.5L12 15H9V12L18.5 2.5Z" stroke="#FF657D" strokeWidth="2" strokeLinejoin="round"/>
+                <path d="M11 4H4C3.4 4 3 4.4 3 5V20C3 20.6 3.4 21 4 21H19C19.6 21 20 20.6 20 20V13" stroke="#8B0000" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M18.5 2.5L21.5 5.5L12 15H9V12L18.5 2.5Z" stroke="#8B0000" strokeWidth="2" strokeLinejoin="round"/>
               </svg>
               Edit Period Dates
             </motion.button>
