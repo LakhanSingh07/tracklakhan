@@ -451,12 +451,12 @@ export const AuthSuccess = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          onClick={() => navigate("home")}
+          onClick={() => navigate("profile-setup")}
           whileTap={{ scale: 0.97 }}
           className="w-full py-4 rounded-2xl text-white font-semibold text-[16px] shadow-lg"
           style={{ background: "linear-gradient(135deg, #FF8FA3 0%, #FF657D 100%)" }}
         >
-          Start Tracking
+          Set Up My Profile
         </motion.button>
       </div>
       <HomeIndicator />

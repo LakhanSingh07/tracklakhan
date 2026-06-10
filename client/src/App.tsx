@@ -7,6 +7,7 @@ import { AppProvider, useApp } from "@/lib/appContext";
 import { ElementSplashScreen } from "@/pages/ElementSplashScreen";
 import { OnboardingScreen } from "@/pages/OnboardingScreen";
 import { AuthSignUp, AuthSignIn, AuthOTP, AuthPassword, AuthSuccess } from "@/pages/AuthSignUp";
+import { ProfileSetupScreen, ProfilePreparingScreen } from "@/pages/ProfileSetupScreen";
 import { HomeScreen } from "@/pages/HomeScreen";
 import { CalendarScreen } from "@/pages/CalendarScreen";
 import { LogEntryScreen, LogWeightScreen, LogTemperatureScreen, LogWaterScreen } from "@/pages/LogEntryScreen";
@@ -47,6 +48,8 @@ function AppRouter() {
     case "auth-otp": return <AuthOTP />;
     case "auth-password": return <AuthPassword />;
     case "auth-success": return <AuthSuccess />;
+    case "profile-setup": return <ProfileSetupScreen />;
+    case "profile-preparing": return <ProfilePreparingScreen />;
     case "home": return <HomeScreen />;
     case "calendar": return <CalendarScreen />;
     case "log-entry": return <LogEntryScreen />;

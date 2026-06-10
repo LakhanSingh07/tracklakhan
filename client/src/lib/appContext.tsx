@@ -9,6 +9,8 @@ export type Screen =
   | "auth-otp"
   | "auth-password"
   | "auth-success"
+  | "profile-setup"
+  | "profile-preparing"
   | "home"
   | "calendar"
   | "log-entry"
@@ -56,6 +58,18 @@ interface LogEntry {
   notes?: string;
 }
 
+interface ProfileData {
+  name: string;
+  birthday: string;
+  weight: number;
+  weightUnit: "kg" | "lbs";
+  height: number;
+  heightUnit: "cm" | "ft";
+  periodLength: number;
+  cycleLength: number;
+  lastPeriodDate: string;
+}
+
 interface AppState {
   currentScreen: Screen;
   navigate: (screen: Screen) => void;
@@ -81,6 +95,7 @@ interface AppState {
   setTodayWater: (ml: number) => void;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
+  updateUserProfile: (data: ProfileData) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -113,6 +128,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   ]);
   const [todayWater, setTodayWater] = useState(1540);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [userName, setUserName] = useState("Maria");
+  const [cycleLengthState, setCycleLengthState] = useState(cycleLength);
+  const [periodLengthState, setPeriodLengthState] = useState(5);
+  const [lastPeriodState, setLastPeriodState] = useState(lastPeriod);
 
   const navigate = (screen: Screen) => {
     setPreviousScreen(currentScreen);
@@ -130,21 +149,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setLogs(prev => [...prev.filter(l => l.date !== entry.date), entry]);
   };
 
+  const updateUserProfile = (data: ProfileData) => {
+    setUserName(data.name || "Maria");
+    setCycleLengthState(data.cycleLength || 28);
+    setPeriodLengthState(data.periodLength || 5);
+    if (data.lastPeriodDate) {
+      setLastPeriodState(new Date(data.lastPeriodDate));
+    }
+  };
+
+  const computedLastPeriod = lastPeriodState;
+  const computedCycleLength = cycleLengthState;
+  const computedNextPeriod = new Date(computedLastPeriod);
+  computedNextPeriod.setDate(computedLastPeriod.getDate() + computedCycleLength);
+  const daysSince = Math.floor((new Date().getTime() - computedLastPeriod.getTime()) / (1000 * 60 * 60 * 24));
+  const computedCurrentDay = (daysSince % computedCycleLength) + 1;
+  const computedDaysUntilNext = computedCycleLength - (daysSince % computedCycleLength);
+
   return (
     <AppContext.Provider value={{
       currentScreen,
       navigate,
       previousScreen,
       goBack,
-      user: { name: "Maria", email: "maria@example.com", avatar: undefined },
+      user: { name: userName, email: "maria@example.com", avatar: undefined },
       cycleData: {
-        lastPeriodStart: lastPeriod,
-        cycleLength,
-        periodLength: 5,
-        nextPeriod,
-        currentDay,
-        phase: getPhase(currentDay),
-        daysUntilNextPeriod: daysUntilNext,
+        lastPeriodStart: computedLastPeriod,
+        cycleLength: computedCycleLength,
+        periodLength: periodLengthState,
+        nextPeriod: computedNextPeriod,
+        currentDay: computedCurrentDay,
+        phase: getPhase(computedCurrentDay),
+        daysUntilNextPeriod: computedDaysUntilNext,
       },
       logs,
       addLog,
@@ -152,6 +188,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setTodayWater,
       selectedDate,
       setSelectedDate,
+      updateUserProfile,
     }}>
       {children}
     </AppContext.Provider>
