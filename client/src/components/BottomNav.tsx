@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useApp, Screen } from "@/lib/appContext";
+import { useTranslation } from "react-i18next";
 
 interface NavItem {
   icon: (active: boolean) => JSX.Element;
@@ -50,10 +51,12 @@ const SparkIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
-const PersonIcon = ({ active }: { active: boolean }) => (
+const CommunityIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="8" r="4" fill={active ? "#FF657D" : "none"} stroke={active ? "#FF657D" : "#9E9E9E"} strokeWidth="1.8"/>
-    <path d="M4 20C4 17 7.6 15 12 15C16.4 15 20 17 20 20" stroke={active ? "#FF657D" : "#9E9E9E"} strokeWidth="1.8" strokeLinecap="round"/>
+    <circle cx="8" cy="9" r="3" fill={active ? "#FF657D" : "none"} stroke={active ? "#FF657D" : "#9E9E9E"} strokeWidth="1.7"/>
+    <circle cx="16" cy="9" r="3" fill={active ? "#FFE7EA" : "none"} stroke={active ? "#FF657D" : "#9E9E9E"} strokeWidth="1.7"/>
+    <path d="M3.5 20C3.5 17.2 5.4 15.2 8 15.2C10.6 15.2 12.5 17.2 12.5 20" stroke={active ? "#FF657D" : "#9E9E9E"} strokeWidth="1.7" strokeLinecap="round"/>
+    <path d="M11.5 20C11.5 17.2 13.4 15.2 16 15.2C18.6 15.2 20.5 17.2 20.5 20" stroke={active ? "#FF657D" : "#9E9E9E"} strokeWidth="1.7" strokeLinecap="round"/>
   </svg>
 );
 
@@ -62,11 +65,12 @@ const navItems: NavItem[] = [
   { icon: (a) => <CalendarIcon active={a} />, label: "Calendar", screen: "calendar" },
   { icon: () => <PlusIcon />, label: "Log", screen: "log-entry", isCenter: true },
   { icon: (a) => <SparkIcon active={a} />, label: "AI Coach", screen: "ai-coach" },
-  { icon: (a) => <PersonIcon active={a} />, label: "Account", screen: "account" },
+  { icon: (a) => <CommunityIcon active={a} />, label: "Community", screen: "community" },
 ];
 
 export const BottomNav = () => {
   const { currentScreen, navigate } = useApp();
+  const { t } = useTranslation();
 
   const calendarScreens: Screen[] = ["calendar", "edit-period", "phase-period", "phase-growth", "phase-release", "phase-progesterone"];
   const aiScreens: Screen[] = ["ai-coach", "insights", "pcos", "health-bar", "health-area"];
@@ -74,7 +78,7 @@ export const BottomNav = () => {
   const isActive = (screen: Screen) => {
     if (screen === "ai-coach") return aiScreens.includes(currentScreen);
     if (screen === "calendar") return calendarScreens.includes(currentScreen);
-    if (screen === "account") return ["account", "personal-data", "reminder", "account-security", "premium", "billing"].includes(currentScreen);
+    if (screen === "community") return currentScreen === "community";
     if (screen === "home") return ["home", "tracker", "cycles"].includes(currentScreen);
     return currentScreen === screen;
   };
@@ -93,7 +97,13 @@ export const BottomNav = () => {
           <motion.button
             key={item.screen}
             whileTap={{ scale: 0.88 }}
-            onClick={() => navigate(item.screen)}
+            onClick={() => {
+              if (item.isCenter && currentScreen === "community") {
+                window.dispatchEvent(new CustomEvent("flowai:open-community-composer"));
+                return;
+              }
+              navigate(item.screen);
+            }}
             className="flex flex-col items-center gap-0.5 relative"
             data-testid={`nav-${item.label.toLowerCase().replace(" ", "-")}`}
           >
@@ -122,7 +132,7 @@ export const BottomNav = () => {
                   className="text-[10px] font-medium"
                   style={{ color: active ? color : "#9E9E9E" }}
                 >
-                  {item.label}
+                  {t("nav_" + item.label.toLowerCase().replace(" ", "_"))}
                 </span>
               </>
             )}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Brain, MessageCircle, Sparkles } from "lucide-react";
 import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
 import { useApp } from "@/lib/appContext";
 
@@ -83,6 +84,54 @@ const slides = [
             </motion.div>
           ))}
         </div>
+      </div>
+    ),
+  },
+  {
+    id: 4,
+    title: "Meet Your AI\nCycle Coach",
+    subtitle: "Ask FlowAI questions, get cycle-aware guidance, and understand your body with AI-powered insights.",
+    emoji: "AI",
+    bg: "linear-gradient(180deg, #F8F0FF 0%, #FFEAF3 100%)",
+    illustration: (
+      <div className="relative w-full h-[240px] flex items-center justify-center">
+        <div className="absolute w-[210px] h-[210px] rounded-full bg-[#E9D5FF] opacity-50" />
+        <div className="absolute w-[150px] h-[150px] rounded-full bg-[#FBCFE8] opacity-40" />
+        <motion.div
+          className="relative z-10 w-[178px] rounded-[28px] bg-white shadow-xl border border-white/70 px-4 py-4"
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 160 }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#F5F0FF]">
+              <Brain size={26} color="#8B5CF6" />
+            </div>
+            <div>
+              <p className="text-[14px] font-bold text-gray-900">AI Coach</p>
+              <p className="text-[11px] text-[#FF657D] font-semibold">Cycle aware</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="w-[118px] h-7 rounded-2xl bg-[#F5F0FF] ml-auto" />
+            <div className="w-[138px] h-8 rounded-2xl bg-[#FFE1E7]" />
+            <div className="w-[96px] h-7 rounded-2xl bg-[#F5F0FF] ml-auto" />
+          </div>
+        </motion.div>
+        <motion.div
+          className="absolute top-12 right-12 w-11 h-11 rounded-2xl bg-white shadow-md flex items-center justify-center"
+          animate={{ y: [-4, 5, -4] }}
+          transition={{ repeat: Infinity, duration: 3 }}
+        >
+          <Sparkles size={22} color="#EC4899" />
+        </motion.div>
+        <motion.div
+          className="absolute bottom-12 left-12 w-11 h-11 rounded-2xl bg-white shadow-md flex items-center justify-center"
+          animate={{ y: [5, -4, 5] }}
+          transition={{ repeat: Infinity, duration: 2.8 }}
+        >
+          <MessageCircle size={22} color="#8B5CF6" />
+        </motion.div>
       </div>
     ),
   },

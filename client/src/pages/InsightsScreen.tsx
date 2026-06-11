@@ -70,7 +70,7 @@ const dateStr = (daysAgo: number) => {
 };
 
 export const InsightsScreen = () => {
-  const { navigate, cycleData, logs, waterLogs, waterGoal, sleepLogs, sleepGoal, stepsLogs, stepsGoal } = useApp();
+  const { navigate, cycleData, logs, waterLogs, waterGoal, sleepLogs, sleepGoal, stepsLogs, stepsGoal, isPremium } = useApp();
   const prediction = useMemo(
     () => computeCyclePrediction(logs, cycleData.cycleLength, cycleData.periodLength, cycleData.lastPeriodStart),
     [logs, cycleData]
@@ -156,7 +156,7 @@ export const InsightsScreen = () => {
       { label: "Cramps (heavy flow days)", value: heavyCount, max: Math.max(heavyCount, 5), color: "#EC4899", icon: "😣" },
       { label: "Bloating (medium+ flow)", value: medHeavyCount, max: Math.max(medHeavyCount, 8), color: "#8B5CF6", icon: "🤰" },
       { label: "Logged days (30d)", value: recent30.length, max: 30, color: "#F59E0B", icon: "📅" },
-      { label: "Period days logged", value: recent30.filter(l => l.flow && l.flow !== "none").length, max: Math.max(1, recent30.filter(l => l.flow && l.flow !== "none").length || 5), color: "#60A5FA", icon: "🩸" },
+      { label: "Period days logged", value: recent30.filter(l => l.flow).length, max: Math.max(1, recent30.filter(l => l.flow).length || 5), color: "#60A5FA", icon: "🩸" },
     ];
   }, [logs]);
 
@@ -359,7 +359,14 @@ export const InsightsScreen = () => {
           <div className="mx-5 mb-5">
             <motion.div
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate("pcos")}
+              onClick={() => {
+                if (isPremium) {
+                  navigate("pcos");
+                } else {
+                  alert("PCOS Dashboard is a Premium feature. Upgrade to Premium to unlock!");
+                  navigate("premium");
+                }
+              }}
               className="rounded-3xl p-5 relative overflow-hidden shadow-md"
               style={{ background: "linear-gradient(135deg, #1E1B4B 0%, #4C1D95 50%, #6D28D9 100%)" }}
             >

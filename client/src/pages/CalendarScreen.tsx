@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MobileLayout, StatusBar, HomeIndicator } from "@/components/MobileLayout";
 import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
+import { useTranslation } from "react-i18next";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -29,6 +30,7 @@ const dayColors: Record<DayType, { bg: string; text: string; dot?: string }> = {
 
 export const CalendarScreen = () => {
   const { cycleData, navigate, selectedDate, setSelectedDate, logs } = useApp();
+  const { t, i18n } = useTranslation();
   const [viewDate, setViewDate] = useState(new Date());
   const today = new Date();
 
@@ -44,10 +46,10 @@ export const CalendarScreen = () => {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const phaseInfo = {
-    period: { label: "Period", color: "#dc143c", icon: "🩸" },
-    fertile: { label: "Fertile Window", color: "#A78BFA", icon: "🌱" },
-    ovulation: { label: "Ovulation", color: "#A78BFA", icon: "⭐" },
-    normal: { label: "Normal", color: "#9CA3AF", icon: "○" },
+    period: { label: t("phase_period"), color: "#dc143c", icon: "🩸" },
+    fertile: { label: t("fertile_window"), color: "#A78BFA", icon: "🌱" },
+    ovulation: { label: t("phase_ovulation"), color: "#A78BFA", icon: "⭐" },
+    normal: { label: t("cycle_legend_normal"), color: "#9CA3AF", icon: "○" },
   };
 
   const dateStr = selectedDate.toISOString().split("T")[0];
@@ -57,6 +59,30 @@ export const CalendarScreen = () => {
     return ((diff % cycleData.cycleLength) + cycleData.cycleLength) % cycleData.cycleLength + 1;
   })();
 
+  const getMonthLabel = (mIdx: number) => {
+    const lang = i18n.language || "en";
+    if (lang === "es") {
+      const esMonths = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+      return esMonths[mIdx];
+    } else if (lang === "hi") {
+      const hiMonths = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
+      return hiMonths[mIdx];
+    }
+    return MONTHS[mIdx];
+  };
+
+  const getDayHeader = (dIdx: number) => {
+    const lang = i18n.language || "en";
+    if (lang === "es") {
+      const esDays = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+      return esDays[dIdx];
+    } else if (lang === "hi") {
+      const hiDays = ["रवि", "सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि"];
+      return hiDays[dIdx];
+    }
+    return DAYS[dIdx];
+  };
+
   return (
     <MobileLayout gradient="linear-gradient(180deg, #F9F9F9 0%, #FFE7EA 100%)">
       <div className="flex flex-col h-screen">
@@ -64,8 +90,8 @@ export const CalendarScreen = () => {
         <div className="flex-1 overflow-y-auto pb-2">
           {/* Header */}
           <div className="px-5 pt-2 pb-4">
-            <h1 className="text-[22px] font-bold text-gray-900" style={{ fontFamily: "Instrument Sans, sans-serif" }}>Calendar</h1>
-            <p className="text-sm text-gray-400">Track your cycle journey</p>
+            <h1 className="text-[22px] font-bold text-gray-900" style={{ fontFamily: "Instrument Sans, sans-serif" }}>{t("calendar")}</h1>
+            <p className="text-sm text-gray-400">{t("track_journey")}</p>
           </div>
 
           {/* Calendar card */}
@@ -80,7 +106,7 @@ export const CalendarScreen = () => {
               </motion.button>
               <motion.div key={`${year}-${month}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 className="text-[17px] font-bold text-gray-900">
-                {MONTHS[month]} {year}
+                {getMonthLabel(month)} {year}
               </motion.div>
               <motion.button whileTap={{ scale: 0.9 }} onClick={nextMonth}
                 className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center">
@@ -92,8 +118,8 @@ export const CalendarScreen = () => {
 
             {/* Weekday headers */}
             <div className="grid grid-cols-7 mb-2">
-              {DAYS.map(d => (
-                <div key={d} className="text-center text-[11px] font-semibold text-gray-400 py-1">{d}</div>
+              {DAYS.map((d, dIdx) => (
+                <div key={d} className="text-center text-[11px] font-semibold text-gray-400 py-1">{getDayHeader(dIdx)}</div>
               ))}
             </div>
 
@@ -160,27 +186,27 @@ export const CalendarScreen = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-[16px] font-bold text-gray-900">
-                  {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                  {selectedDate.toLocaleDateString(i18n.language === "hi" ? "hi-IN" : i18n.language === "es" ? "es-ES" : "en-US", { weekday: "long", month: "long", day: "numeric" })}
                 </h3>
                 <p className="text-sm font-medium" style={{ color: "#dc143c" }}>
-                  Day {cycleDay} of cycle
+                  {t("day_of_cycle", { day: cycleDay })}
                 </p>
               </div>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate("log-entry")}
-                className="px-4 py-2 rounded-full text-sm font-semibold text-white shadow-sm"
+                className="px-4 py-2 rounded-full text-sm font-semibold text-white shadow-sm flex items-center justify-center"
                 style={{ background: "linear-gradient(135deg, #FF8FA3, #FF657D)" }}
               >
-                + Log
+                + {t("add_log")}
               </motion.button>
             </div>
 
             {logForDate ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: "Flow", value: logForDate.flow ?? "—", icon: "🩸", color: "#dc143c" },
-                  { label: "Mood", value: logForDate.mood ?? "—", icon: "", color: "#A78BFA" },
+                  { label: t("phase_period"), value: logForDate.flow ?? "—", icon: "🩸", color: "#dc143c" },
+                  { label: t("nav_ai_coach") /* Mood label fallback */, value: logForDate.mood ?? "—", icon: "", color: "#A78BFA" },
                   { label: "Notes", value: logForDate.notes ? logForDate.notes.substring(0, 20) + (logForDate.notes.length > 20 ? "…" : "") : "—", icon: "📝", color: "#60A5FA" },
                   { label: "Logged", value: "✓", icon: "✅", color: "#34D399" },
                 ].map((item) => (
@@ -194,14 +220,14 @@ export const CalendarScreen = () => {
               </div>
             ) : (
               <div className="rounded-2xl p-4 bg-gray-50 text-center">
-                <p className="text-[13px] text-gray-400 mb-2">No log for this day yet</p>
+                <p className="text-[13px] text-gray-400 mb-2">{t("no_log_yet")}</p>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate("log-entry")}
                   className="text-[13px] font-semibold"
                   style={{ color: "#dc143c" }}
                 >
-                  + Add log
+                  + {t("add_log")}
                 </motion.button>
               </div>
             )}
@@ -219,7 +245,7 @@ export const CalendarScreen = () => {
                 <path d="M11 4H4C3.4 4 3 4.4 3 5V20C3 20.6 3.4 21 4 21H19C19.6 21 20 20.6 20 20V13" stroke="#dc143c" strokeWidth="2" strokeLinecap="round"/>
                 <path d="M18.5 2.5L21.5 5.5L12 15H9V12L18.5 2.5Z" stroke="#dc143c" strokeWidth="2" strokeLinejoin="round"/>
               </svg>
-              Edit Period Dates
+              {t("edit_period_dates")}
             </motion.button>
           </div>
         </div>

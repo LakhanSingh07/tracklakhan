@@ -3,10 +3,13 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useApp } from "@/lib/appContext";
+import { HindiTextLayer } from "@/components/HindiTextLayer";
+import "@/lib/i18n";
+
 
 import { ElementSplashScreen } from "@/pages/ElementSplashScreen";
 import { OnboardingScreen } from "@/pages/OnboardingScreen";
-import { AuthSignUp, AuthSignIn, AuthOTP, AuthPassword, AuthSuccess } from "@/pages/AuthSignUp";
+import { AuthSignUp, AuthSignIn, AuthOTP, AuthPassword, AuthSuccess, AuthResetSuccess } from "@/pages/AuthSignUp";
 import { ProfileSetupScreen, ProfilePreparingScreen } from "@/pages/ProfileSetupScreen";
 import { NotificationCenterScreen } from "@/pages/NotificationCenterScreen";
 import { SymptomTrackerScreen } from "@/pages/SymptomTrackerScreen";
@@ -24,12 +27,15 @@ import { AICoachScreen } from "@/pages/AICoachScreen";
 import { InsightsScreen } from "@/pages/InsightsScreen";
 import { HealthReportScreen } from "@/pages/HealthReportScreen";
 import { PCOSScreen } from "@/pages/PCOSScreen";
+import { CommunityScreen } from "@/pages/CommunityScreen";
 import {
   AccountScreen,
   PersonalDataScreen,
+  PreferencesScreen,
   ReminderScreen,
   AccountSecurityScreen,
   LogoutConfirmDialog,
+  MerchantConfigScreen,
 } from "@/pages/AccountScreen";
 import {
   PremiumScreen,
@@ -43,8 +49,28 @@ import { WellnessStepsScreen } from "@/pages/WellnessStepsScreen";
 import { WellnessWaterScreen } from "@/pages/WellnessWaterScreen";
 import { WellnessSleepScreen } from "@/pages/WellnessSleepScreen";
 
+const publicScreens = new Set([
+  "splash",
+  "onboarding",
+  "auth-signup",
+  "auth-signup-form",
+  "auth-signin",
+  "auth-otp",
+  "auth-password",
+  "auth-success",
+  "auth-reset-success",
+]);
+
 function AppRouter() {
-  const { currentScreen } = useApp();
+  const { currentScreen, authLoading, authUser } = useApp();
+
+  if (authLoading) {
+    return <ElementSplashScreen />;
+  }
+
+  if (!authUser && !publicScreens.has(currentScreen)) {
+    return <AuthSignIn />;
+  }
 
   switch (currentScreen) {
     case "splash": return <ElementSplashScreen />;
@@ -55,6 +81,7 @@ function AppRouter() {
     case "auth-otp": return <AuthOTP />;
     case "auth-password": return <AuthPassword />;
     case "auth-success": return <AuthSuccess />;
+    case "auth-reset-success": return <AuthResetSuccess />;
     case "profile-setup": return <ProfileSetupScreen />;
     case "profile-preparing": return <ProfilePreparingScreen />;
     case "notifications": return <NotificationCenterScreen />;
@@ -80,11 +107,14 @@ function AppRouter() {
     case "insights": return <InsightsScreen />;
     case "health-report": return <HealthReportScreen />;
     case "pcos": return <PCOSScreen />;
+    case "community": return <CommunityScreen />;
     case "account": return <AccountScreen />;
     case "personal-data": return <PersonalDataScreen />;
+    case "preferences": return <PreferencesScreen />;
     case "reminder": return <ReminderScreen />;
     case "account-security": return <AccountSecurityScreen />;
     case "logout-confirm": return <LogoutConfirmDialog />;
+    case "merchant-config": return <MerchantConfigScreen />;
     case "premium": return <PremiumScreen />;
     case "billing": return <BillingScreen />;
     case "payment-methods": return <PaymentMethodsScreen />;
@@ -103,6 +133,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppProvider>
+          <HindiTextLayer />
           <Toaster />
           <AppRouter />
         </AppProvider>

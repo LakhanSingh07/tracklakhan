@@ -93,6 +93,7 @@ export const ProfileSetupScreen = () => {
       periodLength,
       cycleLength,
       lastPeriodDate: lastPeriodDate || new Date().toISOString().split("T")[0],
+      hasPCOS: hasPCOS ?? false,
     });
     navigate("profile-preparing");
   };

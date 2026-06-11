@@ -2,6 +2,15 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { loadEnvFile } from "node:process";
+
+try {
+  loadEnvFile(".env");
+} catch {
+  // Local .env is optional; deployed environments can provide variables directly.
+}
+
+process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
 const app = express();
 const httpServer = createServer(app)
@@ -48,8 +57,11 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (req.method === "POST" && req.body) {
+        logLine += ` :: Req: ${JSON.stringify(req.body)}`;
+      }
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        logLine += ` :: Res: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
       log(logLine);
@@ -90,14 +102,41 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
+  const listenOptions =
+    process.platform === "win32"
+      ? { port, host: "0.0.0.0" }
+      : { port, host: "0.0.0.0", reusePort: true };
+
   httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
+    listenOptions,
     () => {
       log(`serving on port ${port}`);
     },
   );
+
+  // Start a redirect helper on port 3000 to catch Supabase auth callbacks and redirect to 5000
+  try {
+    const redirectApp = express();
+    redirectApp.use((req, res) => {
+      res.send(`
+        <html>
+          <head><title>Redirecting to port 5000...</title></head>
+          <body>
+            <p>Redirecting to FlowAI application on port 5000...</p>
+            <script>
+              window.location.href = window.location.href.replace(":3000", ":5000");
+            </script>
+          </body>
+        </html>
+      `);
+    });
+    const redirectServer = redirectApp.listen(3000, "0.0.0.0", () => {
+      log("Auth redirect helper listening on port 3000");
+    });
+    redirectServer.on("error", (err: any) => {
+      log(`Auth redirect helper failed to start: ${err.message}`);
+    });
+  } catch (err: any) {
+    log(`Auth redirect helper error: ${err.message}`);
+  }
 })();

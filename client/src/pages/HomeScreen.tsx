@@ -5,6 +5,16 @@ import { BottomNav } from "@/components/BottomNav";
 import { useApp } from "@/lib/appContext";
 import { NotificationBell } from "@/pages/NotificationCenterScreen";
 import { computeCyclePrediction } from "@/lib/cyclePrediction";
+import { useTranslation } from "react-i18next";
+import stepIcon from "@assets/icons/step.png";
+import waterIcon from "@assets/icons/water.png";
+import sleepIcon from "@assets/icons/sleep.png";
+import happyIcon from "@assets/icons/happy.png";
+import calmIcon from "@assets/icons/calm.png";
+import sadIcon from "@assets/icons/sad.png";
+import irritatedIcon from "@assets/icons/irritated.png";
+import anxiousIcon from "@assets/icons/anxious.png";
+import energeticIcon from "@assets/icons/energetic.png";
 
 const MiniRing = ({ pct, color, bg }: { pct: number; color: string; bg: string }) => {
   const r = 11;
@@ -21,8 +31,13 @@ const MiniRing = ({ pct, color, bg }: { pct: number; color: string; bg: string }
   );
 };
 
+const QuickCardIcon = ({ src, alt }: { src: string; alt: string }) => (
+  <img src={src} alt={alt} className="h-7 w-7 object-contain" draggable={false} />
+);
+
 const WellnessCards = () => {
   const { navigate, getTodaySteps, stepsGoal, getTodayWaterTotal, waterGoal, getLastSleep, sleepGoal } = useApp();
+  const { t } = useTranslation();
   const todaySteps = getTodaySteps();
   const todayWaterMl = getTodayWaterTotal();
   const lastSleep = getLastSleep();
@@ -38,13 +53,13 @@ const WellnessCards = () => {
         data-testid="quick-action-steps"
       >
         <div className="flex items-center justify-between">
-          <span className="text-base">🚶</span>
+          <QuickCardIcon src={stepIcon} alt="Steps" />
           <MiniRing pct={todaySteps / stepsGoal} color="#F59E0B" bg="#FDE68A" />
         </div>
         <div className="text-[15px] font-bold text-[#92400e] leading-none">
           {todaySteps >= 1000 ? `${(todaySteps / 1000).toFixed(1)}k` : todaySteps.toLocaleString()}
         </div>
-        <div className="text-[9px] text-[#B45309] font-medium">/ {(stepsGoal / 1000).toFixed(0)}k steps</div>
+        <div className="text-[9px] text-[#B45309] font-medium">/ {(stepsGoal / 1000).toFixed(0)}k {t("steps_goal")}</div>
       </motion.button>
 
       {/* Water */}
@@ -56,13 +71,13 @@ const WellnessCards = () => {
         data-testid="quick-action-water"
       >
         <div className="flex items-center justify-between">
-          <span className="text-base">💧</span>
+          <QuickCardIcon src={waterIcon} alt="Water" />
           <MiniRing pct={todayWaterMl / waterGoal} color="#3B82F6" bg="#BFDBFE" />
         </div>
         <div className="text-[15px] font-bold text-[#1e40af] leading-none">
           {todayWaterMl >= 1000 ? `${(todayWaterMl / 1000).toFixed(1)}L` : `${todayWaterMl}ml`}
         </div>
-        <div className="text-[9px] text-[#3B82F6] font-medium">/ {waterGoal / 1000}L goal</div>
+        <div className="text-[9px] text-[#3B82F6] font-medium">/ {waterGoal / 1000}L {t("water_goal")}</div>
       </motion.button>
 
       {/* Sleep */}
@@ -74,13 +89,13 @@ const WellnessCards = () => {
         data-testid="quick-action-sleep"
       >
         <div className="flex items-center justify-between">
-          <span className="text-base">😴</span>
+          <QuickCardIcon src={sleepIcon} alt="Sleep" />
           <MiniRing pct={lastSleep ? lastSleep.duration / sleepGoal : 0} color="#8B5CF6" bg="#DDD6FE" />
         </div>
         <div className="text-[15px] font-bold text-[#5b21b6] leading-none">
           {lastSleep ? `${lastSleep.duration}h` : "--"}
         </div>
-        <div className="text-[9px] text-[#7C3AED] font-medium">/ {sleepGoal}h goal</div>
+        <div className="text-[9px] text-[#7C3AED] font-medium">/ {sleepGoal}h {t("sleep_goal")}</div>
       </motion.button>
     </div>
   );
@@ -118,8 +133,8 @@ function segPath(cx: number, cy: number, ro: number, ri: number, s: number, e: n
 
 const DropIcon = ({ x, y, color, delay, size = 7 }: { x: number; y: number; color: string; delay: number; size?: number }) => (
   <motion.g
-    initial={{ opacity: 0, y: y - 6 }}
-    animate={{ opacity: [0, 1, 1, 0.7], y: [y - 6, y, y + 1, y] }}
+    initial={{ opacity: 0, y: -6 }}
+    animate={{ opacity: [0, 1, 1, 0.7], y: [-6, 0, 1, 0] }}
     transition={{ duration: 0.8, delay, ease: "easeOut", times: [0, 0.4, 0.7, 1] }}
   >
     <motion.path
@@ -147,6 +162,7 @@ const SmartCycleDial = ({
 }) => {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
   const [pulse, setPulse] = useState(0);
+  const { t } = useTranslation();
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
 
@@ -167,9 +183,20 @@ const SmartCycleDial = ({
   const GAP = 2.6;
   const segA = 360 / TOTAL;
 
+  // Generate dynamic phase map for this user
+  const phaseMap: Record<number, string> = {};
+  for (let d = 1; d <= periodLength; d++) phaseMap[d] = "menstruation";
+  const ovulationDay = Math.round(cycleLength - 14);
+  for (let d = periodLength + 1; d < ovulationDay - 4; d++) phaseMap[d] = "lowFertility";
+  for (let d = Math.max(1, ovulationDay - 4); d < ovulationDay; d++) phaseMap[d] = "highFertility";
+  phaseMap[ovulationDay] = "ovulation";
+  for (let d = ovulationDay + 1; d <= Math.min(TOTAL, ovulationDay + 3); d++) phaseMap[d] = "highFertility";
+  for (let d = ovulationDay + 4; d <= Math.min(TOTAL, TOTAL - 6); d++) phaseMap[d] = "safe";
+  for (let d = Math.max(1, TOTAL - 5); d <= TOTAL; d++) phaseMap[d] = "verySafe";
+
   const activeDay = hoveredDay ?? currentDay;
-  const activePh = PHASE_MAP[activeDay] || "verySafe";
-  const curPh = PHASE_MAP[currentDay] || "verySafe";
+  const activePh = phaseMap[activeDay] || "verySafe";
+  const curPh = phaseMap[currentDay] || "verySafe";
   const activeStyle = PHASE_STYLE[activePh];
   const curStyle = PHASE_STYLE[curPh];
 
@@ -177,6 +204,17 @@ const SmartCycleDial = ({
   const nextPeriodDay = isOnPeriod ? 1 : TOTAL - daysUntilNextPeriod + 1;
 
   const pulseR = 1 + 0.06 * Math.sin(pulse * 2.5);
+
+  const getPhaseLabel = (ph: string) => {
+    if (ph === "menstruation") return t("phase_period");
+    if (ph === "lowFertility") return t("phase_low_fertility");
+    if (ph === "highFertility") return t("phase_fertile");
+    if (ph === "ovulation") return t("phase_ovulation");
+    if (ph === "safe") return t("phase_safe");
+    return t("phase_very_safe");
+  };
+
+  const activeLabel = getPhaseLabel(activePh);
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -202,14 +240,14 @@ const SmartCycleDial = ({
 
           {Array.from({ length: TOTAL }, (_, i) => {
             const day = i + 1;
-            const ph = PHASE_MAP[day] || "verySafe";
+            const ph = phaseMap[day] || "verySafe";
             const style = PHASE_STYLE[ph];
             const s = i * segA + GAP / 2;
             const e = (i + 1) * segA - GAP / 2;
             const mid = (s + e) / 2;
             const isHov = day === hoveredDay;
             const isCur = day === currentDay;
-            const isOvl = day === 14;
+            const isOvl = day === ovulationDay;
             const isPeriodDay = day <= periodLength;
             const isNextPeriodDay = day === nextPeriodDay && !isCur && daysUntilNextPeriod > 0;
 
@@ -321,7 +359,7 @@ const SmartCycleDial = ({
                 letterSpacing="1.4"
                 style={{ fontFamily: "Instrument Sans, sans-serif" }}
               >
-                {activeStyle.label.toUpperCase()}
+                {activeLabel.toUpperCase()}
               </text>
 
               {/* Hero — dominant countdown */}
@@ -350,7 +388,7 @@ const SmartCycleDial = ({
                     fontWeight="700"
                     style={{ fontFamily: "Instrument Sans, sans-serif" }}
                   >
-                    🩸 days remaining
+                    🩸 {t("days_remaining")}
                   </text>
                 </motion.g>
               ) : (
@@ -375,7 +413,7 @@ const SmartCycleDial = ({
                     fontWeight="600"
                     style={{ fontFamily: "Instrument Sans, sans-serif" }}
                   >
-                    days to period
+                    {t("days_to_period")}
                   </text>
                 </>
               )}
@@ -391,7 +429,7 @@ const SmartCycleDial = ({
                 fontWeight="500"
                 style={{ fontFamily: "Instrument Sans, sans-serif" }}
               >
-                Day {activeDay}
+                {t("day")} {activeDay}
               </text>
             </motion.g>
           </AnimatePresence>
@@ -400,7 +438,7 @@ const SmartCycleDial = ({
 
       <div className="flex gap-2 flex-wrap justify-center mt-3 px-2">
         {Object.entries(PHASE_STYLE).map(([key, s]) => {
-          const isActive = (PHASE_MAP[activeDay] || "verySafe") === key;
+          const isActive = (phaseMap[activeDay] || "verySafe") === key;
           return (
             <motion.div
               key={key}
@@ -418,7 +456,7 @@ const SmartCycleDial = ({
               {!["menstruation", "ovulation"].includes(key) && (
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.bg }} />
               )}
-              {s.label}
+              {getPhaseLabel(key)}
             </motion.div>
           );
         })}
@@ -427,7 +465,7 @@ const SmartCycleDial = ({
   );
 };
 
-const MoodButton = ({ emoji, label, color, onClick }: { emoji: string; label: string; color: string; onClick: () => void }) => (
+const MoodButton = ({ icon, label, color, onClick }: { icon: string; label: string; color: string; onClick: () => void }) => (
   <motion.button
     whileTap={{ scale: 0.85 }}
     onClick={onClick}
@@ -438,7 +476,7 @@ const MoodButton = ({ emoji, label, color, onClick }: { emoji: string; label: st
       className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shadow-sm border border-gray-100"
       style={{ background: color + "20" }}
     >
-      {emoji}
+      <img src={icon} alt={label} className="h-10 w-10 rounded-xl object-cover" draggable={false} />
     </motion.div>
     <span className="text-[10px] text-gray-500 font-medium">{label}</span>
   </motion.button>
@@ -446,6 +484,7 @@ const MoodButton = ({ emoji, label, color, onClick }: { emoji: string; label: st
 
 export const HomeScreen = () => {
   const { cycleData, user, navigate, logs, getTodayWaterTotal, waterGoal } = useApp();
+  const { t } = useTranslation();
   const today = new Date();
 
   const streak = useMemo(() => {
@@ -475,23 +514,56 @@ export const HomeScreen = () => {
   });
 
   const hour = today.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? t("greet_morning") : hour < 17 ? t("greet_afternoon") : t("greet_evening");
 
   const quickStats = [
-    { label: "Cycle Length", value: String(Math.round(prediction.averageCycleLength)), unit: "days", icon: "🔄", color: "#FF657D", bg: "#FFF0F3" },
-    { label: "Period Length", value: String(Math.round(prediction.averagePeriodLength)), unit: "days", icon: "📍", color: "#8B5CF6", bg: "#F5F0FF" },
-    { label: prediction.usingAI ? "AI Next Period" : "Next Period", value: String(Math.max(0, aiDaysUntil)), unit: "days", icon: prediction.usingAI ? "🧠" : "📅", color: "#60A5FA", bg: "#EFF6FF" },
-    { label: "Water Today", value: (getTodayWaterTotal() / 1000).toFixed(1), unit: "L", icon: "💧", color: "#34D399", bg: "#ECFDF5" },
+    { label: t("stat_cycle_length"), value: String(Math.round(prediction.averageCycleLength)), unit: t("unit_days"), icon: "🔄", color: "#FF657D", bg: "#FFF0F3" },
+    { label: t("stat_period_length"), value: String(Math.round(prediction.averagePeriodLength)), unit: t("unit_days"), icon: "📍", color: "#8B5CF6", bg: "#F5F0FF" },
+    { label: prediction.usingAI ? t("stat_ai_next_period") : t("stat_next_period"), value: String(Math.max(0, aiDaysUntil)), unit: t("unit_days"), icon: prediction.usingAI ? "🧠" : "📅", color: "#60A5FA", bg: "#EFF6FF" },
+    { label: t("stat_water_today"), value: (getTodayWaterTotal() / 1000).toFixed(1), unit: "L", icon: "💧", color: "#34D399", bg: "#ECFDF5" },
   ];
 
   const moods = [
-    { emoji: "😊", label: "Happy", color: "#F59E0B" },
-    { emoji: "😌", label: "Calm", color: "#34D399" },
-    { emoji: "😔", label: "Sad", color: "#60A5FA" },
-    { emoji: "😤", label: "Irritated", color: "#EF4444" },
-    { emoji: "😰", label: "Anxious", color: "#8B5CF6" },
-    { emoji: "⚡", label: "Energetic", color: "#EC4899" },
+    { icon: happyIcon, label: "Happy", color: "#F59E0B" },
+    { icon: calmIcon, label: "Calm", color: "#34D399" },
+    { icon: sadIcon, label: "Sad", color: "#60A5FA" },
+    { icon: irritatedIcon, label: "Irritated", color: "#EF4444" },
+    { icon: anxiousIcon, label: "Anxious", color: "#8B5CF6" },
+    { icon: energeticIcon, label: "Energetic", color: "#EC4899" },
   ];
+
+  const getMoodLabel = (mLabel: string) => {
+    const lower = mLabel.toLowerCase();
+    if (lower === "happy") return t("mood_happy");
+    if (lower === "calm") return t("mood_calm");
+    if (lower === "sad") return t("mood_sad");
+    if (lower === "irritated") return t("mood_irritated");
+    if (lower === "anxious") return t("mood_anxious");
+    return t("mood_energetic");
+  };
+
+  const getPhaseLabel = (ph: string) => {
+    if (ph === "Menstrual") return t("phase_period");
+    if (ph === "Follicular") return t("phase_low_fertility");
+    if (ph === "Ovulation") return t("phase_ovulation");
+    return t("phase_safe");
+  };
+
+  const homePhaseLabel = getPhaseLabel(cycleData.phase);
+
+  const insightTitle = (() => {
+    if (cycleData.phase === "Menstrual") return t("insight_title_menstrual");
+    if (cycleData.phase === "Follicular") return t("insight_title_follicular");
+    if (cycleData.phase === "Ovulation") return t("insight_title_ovulation");
+    return t("insight_title_luteal");
+  })();
+
+  const insightDesc = (() => {
+    if (cycleData.phase === "Menstrual") return t("insight_desc_menstrual");
+    if (cycleData.phase === "Follicular") return t("insight_desc_follicular");
+    if (cycleData.phase === "Ovulation") return t("insight_desc_ovulation");
+    return t("insight_desc_luteal");
+  })();
 
   return (
     <MobileLayout gradient="linear-gradient(180deg, #F9F5FF 0%, #FFF0F4 100%)">
@@ -521,12 +593,12 @@ export const HomeScreen = () => {
                 data-testid="button-ai-coach-shortcut"
               >
                 <span className="text-sm">✨</span>
-                <span className="text-white text-[11px] font-bold">Ask AI</span>
+                <span className="text-white text-[11px] font-bold">{t("ask_ai")}</span>
               </motion.button>
               <NotificationBell onPress={() => navigate("notifications")} />
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("personal-data")}
+                onClick={() => navigate("account")}
                 className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-pink-300 to-purple-400 flex items-center justify-center shadow-sm"
                 data-testid="button-profile-avatar"
               >
@@ -593,12 +665,12 @@ export const HomeScreen = () => {
           {/* Quick Mood Log */}
           <div className="px-5 mb-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[15px] font-bold text-gray-800">How are you feeling?</h2>
-              <button onClick={() => navigate("log-mood")} className="text-[11px] text-[#8B5CF6] font-semibold">More →</button>
+              <h2 className="text-[15px] font-bold text-gray-800">{t("how_feeling")}</h2>
+              <button onClick={() => navigate("log-mood")} className="text-[11px] text-[#8B5CF6] font-semibold">{t("more")} →</button>
             </div>
             <div className="bg-white rounded-2xl px-4 py-3 shadow-sm flex justify-between">
               {moods.map(m => (
-                <MoodButton key={m.label} {...m} onClick={() => navigate("log-mood")} />
+                <MoodButton key={m.label} {...m} label={getMoodLabel(m.label)} onClick={() => navigate("log-mood")} />
               ))}
             </div>
           </div>
@@ -625,26 +697,14 @@ export const HomeScreen = () => {
                   <span className="text-[12px] font-semibold opacity-90 uppercase tracking-wide">FlowAI Coach</span>
                 </div>
                 <h3 className="text-[17px] font-bold mb-1.5 leading-snug">
-                  {cycleData.phase === "Menstrual"
-                    ? "Rest & replenish iron today 🩸"
-                    : cycleData.phase === "Follicular"
-                    ? "Energy rising — start new projects! 🌱"
-                    : cycleData.phase === "Ovulation"
-                    ? "Peak energy & creativity today! 🌟"
-                    : "Go gentle — your progesterone is high 🌙"}
+                  {insightTitle}
                 </h3>
                 <p className="text-[12px] opacity-75 leading-relaxed">
-                  {cycleData.phase === "Menstrual"
-                    ? "Eat spinach, lentils & dark chocolate. Avoid caffeine. Your body is working hard."
-                    : cycleData.phase === "Follicular"
-                    ? "Estrogen is rising. Great time to exercise harder, socialize, and tackle goals."
-                    : cycleData.phase === "Ovulation"
-                    ? "You're at peak fertility and creativity. Great day for important decisions!"
-                    : "Your body craves comfort. Prioritize sleep, warm foods, and gentle movement."}
+                  {insightDesc}
                 </p>
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-1 text-[12px] font-semibold">
-                    <span>Ask FlowAI</span>
+                    <span>{t("ask_flowai")}</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                       <path d="M9 18L15 12L9 6" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
                     </svg>
@@ -683,10 +743,10 @@ export const HomeScreen = () => {
                   {streak}
                 </div>
                 <div className={`text-[11px] font-semibold mt-0.5 ${streak >= 7 ? "text-white/80" : "text-[#D97706]"}`}>
-                  day streak
+                  {t("day_streak")}
                 </div>
                 {streak === 0 && (
-                  <div className="text-[10px] text-gray-400 mt-0.5">Log today to start!</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{t("log_today")}</div>
                 )}
                 {streak >= 3 && streak < 7 && (
                   <div className={`text-[9px] font-medium mt-1 text-[#D97706]`}>
@@ -715,9 +775,9 @@ export const HomeScreen = () => {
                 >
                   {logs.length}
                 </div>
-                <div className="text-[11px] font-semibold text-[#7C3AED] mt-0.5">logs this month</div>
+                <div className="text-[11px] font-semibold text-[#7C3AED] mt-0.5">{t("logs_this_month")}</div>
                 <div className="text-[9px] text-[#A78BFA] mt-1">
-                  {logs.length >= 10 ? "Great consistency!" : "Keep tracking!"}
+                  {logs.length >= 10 ? t("snap_consistency") : t("snap_keep_tracking")}
                 </div>
               </motion.div>
 
@@ -733,8 +793,8 @@ export const HomeScreen = () => {
                 data-testid="symptoms-card"
               >
                 <div className="text-2xl mb-1">🩺</div>
-                <div className="text-[12px] font-bold text-[#FF657D] leading-tight mt-1">Log Symptoms</div>
-                <div className="text-[9px] text-[#FF8FA3] mt-1 leading-tight">Track body & mood</div>
+                <div className="text-[12px] font-bold text-[#FF657D] leading-tight mt-1">{t("symptoms_card")}</div>
+                <div className="text-[9px] text-[#FF8FA3] mt-1 leading-tight">{t("track_symptoms")}</div>
               </motion.div>
             </div>
           </div>
@@ -742,8 +802,8 @@ export const HomeScreen = () => {
           {/* Quick stats grid */}
           <div className="px-5 mb-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[15px] font-bold text-gray-800">Today's Overview</h2>
-              <button onClick={() => navigate("insights")} className="text-[11px] text-[#8B5CF6] font-semibold">Insights →</button>
+              <h2 className="text-[15px] font-bold text-gray-800">{t("todays_overview")}</h2>
+              <button onClick={() => navigate("insights")} className="text-[11px] text-[#8B5CF6] font-semibold">{t("insights")} →</button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {quickStats.map((stat, i) => (
@@ -778,13 +838,13 @@ export const HomeScreen = () => {
             >
               <div className="text-3xl flex-shrink-0">🩸</div>
               <div className="flex-1 min-w-0">
-                <div className="text-[11px] text-[#FF657D] font-semibold uppercase tracking-wide mb-0.5">Phase Insight</div>
-                <h3 className="text-[14px] font-bold text-gray-800">{cycleData.phase} Phase</h3>
+                <div className="text-[11px] text-[#FF657D] font-semibold uppercase tracking-wide mb-0.5">{t("phase_insight")}</div>
+                <h3 className="text-[14px] font-bold text-gray-800">{homePhaseLabel}</h3>
                 <p className="text-[12px] text-gray-500 mt-0.5 leading-relaxed">
-                  {cycleData.phase === "Menstrual" ? "Rest and prioritize self-care." :
-                   cycleData.phase === "Follicular" ? "Energy levels rising! Start new projects." :
-                   cycleData.phase === "Ovulation" ? "Peak energy and creativity today!" :
-                   "Focus on gentle exercise and calm."}
+                  {cycleData.phase === "Menstrual" ? t("insight_desc_menstrual") :
+                   cycleData.phase === "Follicular" ? t("insight_desc_follicular") :
+                   cycleData.phase === "Ovulation" ? t("insight_desc_ovulation") :
+                   t("insight_desc_luteal")}
                 </p>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">

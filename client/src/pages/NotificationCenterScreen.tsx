@@ -209,8 +209,16 @@ export const NotificationCenterScreen = () => {
   const unreadCount = filtered.filter((n) => n.unread && !readIds.has(n.id)).length;
 
   const markAllRead = () => setReadIds(new Set(allNotifs.map((n) => n.id)));
-  const dismiss = (id: string) => setDismissedIds((prev) => new Set([...prev, id]));
-  const markRead = (id: string) => setReadIds((prev) => new Set([...prev, id]));
+  const dismiss = (id: string) => setDismissedIds((prev) => {
+    const s = new Set(prev);
+    s.add(id);
+    return s;
+  });
+  const markRead = (id: string) => setReadIds((prev) => {
+    const s = new Set(prev);
+    s.add(id);
+    return s;
+  });
 
   const tabs: { key: FilterTab; label: string; emoji: string }[] = [
     { key: "all", label: "All", emoji: "" },

@@ -27,6 +27,7 @@ interface HealthContext {
   lastSleepDuration?: number;
   lastSleepQuality?: string;
   weeklyStepsAvg?: number;
+  language?: string;
 }
 
 const SUGGESTIONS = [
@@ -143,7 +144,7 @@ const MessageBubble = ({ msg }: { msg: Message }) => {
 };
 
 export const AICoachScreen = () => {
-  const { navigate, cycleData, logs, todayWater, getTodaySteps, stepsGoal, getLastSleep, stepsLogs } = useApp();
+  const { navigate, cycleData, logs, todayWater, getTodaySteps, stepsGoal, getLastSleep, stepsLogs, isPremium, language } = useApp();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -151,6 +152,7 @@ export const AICoachScreen = () => {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [usageCount, setUsageCount] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const historyRef = useRef<{ role: string; content: string }[]>([]);
@@ -193,8 +195,9 @@ export const AICoachScreen = () => {
       lastSleepDuration: lastSleep?.duration,
       lastSleepQuality: lastSleep?.quality,
       weeklyStepsAvg,
+      language,
     };
-  }, [cycleData, logs, todayWater, getTodaySteps, getLastSleep, stepsLogs, stepsGoal]);
+  }, [cycleData, logs, todayWater, getTodaySteps, getLastSleep, stepsLogs, stepsGoal, language]);
 
   // Init welcome message
   useEffect(() => {
@@ -207,6 +210,11 @@ export const AICoachScreen = () => {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isStreaming) return;
+
+    if (!isPremium && usageCount >= 2) {
+      setShowPaywall(true);
+      return;
+    }
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -551,6 +559,53 @@ export const AICoachScreen = () => {
             </motion.button>
           </div>
         </div>
+
+        {/* Premium Paywall Modal */}
+        <AnimatePresence>
+          {showPaywall && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center px-6"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-white rounded-3xl p-6 shadow-2xl border border-gray-100 max-w-sm w-full text-center space-y-4"
+              >
+                <div className="w-16 h-16 rounded-full bg-[#FFF0F2] flex items-center justify-center text-3xl mx-auto">
+                  👑
+                </div>
+                <h3 className="text-xl font-bold text-gray-900" style={{ fontFamily: "Instrument Sans, sans-serif" }}>
+                  Unlock FlowAI Premium
+                </h3>
+                <p className="text-gray-500 text-xs leading-relaxed">
+                  You have reached your daily limit of 2 free messages. Upgrade to Premium for unlimited chat, reports, and advanced tracking modules.
+                </p>
+                <div className="space-y-2 pt-2">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      setShowPaywall(false);
+                      navigate("premium");
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-[#FF8FA3] to-[#FF657D] text-white rounded-2xl font-bold text-sm shadow-md"
+                  >
+                    Upgrade to Premium
+                  </motion.button>
+                  <button
+                    onClick={() => setShowPaywall(false)}
+                    className="w-full py-3 bg-gray-50 text-gray-400 rounded-2xl font-bold text-xs"
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <BottomNav />
         <HomeIndicator />

@@ -66,6 +66,7 @@ export const LogEntryScreen = () => {
       flow: flow as any,
       mood,
       notes,
+      symptoms: selectedSymptoms,
     });
     setSaved(true);
     setTimeout(() => { setSaved(false); navigate("home"); }, 1200);

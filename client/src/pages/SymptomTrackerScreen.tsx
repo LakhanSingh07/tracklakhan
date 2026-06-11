@@ -90,6 +90,7 @@ export const SymptomTrackerScreen = () => {
       date: selectedDate.toISOString().split("T")[0],
       mood: selectedEmotional[0] === "happy" ? "😊" : selectedEmotional[0] === "sad" ? "😢" : "😌",
       notes: `Physical: ${selectedPhysical.join(", ")} | Emotional: ${selectedEmotional.join(", ")} | Sleep: ${sleepQuality}/5 | Exercise: ${exercise} | Stress: ${stressLevel}/5 | Water: ${waterGlasses} glasses`,
+      symptoms: [...selectedPhysical, ...selectedEmotional],
     });
     setSaved(true);
     setTimeout(() => { setSaved(false); navigate("home"); }, 1200);
