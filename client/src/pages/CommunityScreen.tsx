@@ -170,8 +170,8 @@ export const CommunityScreen = () => {
       setError("");
       setLoading(true);
 
-      // 1. Fetch groups & pages
-      const [groupsRes, pagesRes, groupMembersRes, savedRes, reactionsRes, blocksRes, followersRes] = await Promise.all([
+      // 1. Fetch groups, pages, user relations AND posts in parallel (Waterfall Step 1 collapsed)
+      const [groupsRes, pagesRes, groupMembersRes, savedRes, reactionsRes, blocksRes, followersRes, postsRes] = await Promise.all([
         supabase.from("community_groups").select("*").order("name", { ascending: true }),
         supabase.from("community_pages").select("*").order("name", { ascending: true }),
         supabase.from("community_group_members").select("group_id").eq("user_id", authUser.id),
@@ -179,14 +179,17 @@ export const CommunityScreen = () => {
         supabase.from("community_reactions").select("post_id, reaction_type").eq("user_id", authUser.id),
         supabase.from("community_blocks").select("blocked_user_id").eq("blocker_user_id", authUser.id),
         supabase.from("community_page_followers").select("page_id").eq("user_id", authUser.id),
+        supabase.from("community_posts").select("*").order("created_at", { ascending: false }).limit(40), // Optimised: Limit posts to 40
       ]);
 
       if (groupsRes.error) {
         throw new Error("Tables not ready. Ensure supabase-saheli-community-migration.sql has been run.");
       }
+      if (postsRes.error) throw postsRes.error;
 
       const fetchedGroups = (groupsRes.data || []) as CommunityGroup[];
       const fetchedPages = (pagesRes.data || []) as ExpertPage[];
+      const rawPosts = (postsRes.data || []) as CommunityPost[];
 
       const joinedIds = new Set((groupMembersRes.data || []).map((m: any) => m.group_id));
       const savedIds = new Set((savedRes.data || []).map((s: any) => s.post_id));
@@ -203,40 +206,30 @@ export const CommunityScreen = () => {
       setGroups(fetchedGroups);
       setPages(fetchedPages);
 
-      // 2. Fetch posts
-      const { data: postsData, error: postsError } = await supabase
-        .from("community_posts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (postsError) throw postsError;
-
-      const rawPosts = (postsData || []) as CommunityPost[];
-
       // Filter out blocked users
       const activePosts = rawPosts.filter(p => !p.user_id || !blockedIds.has(p.user_id));
 
-      // 3. Resolve nicknames and group names in memory
+      // 2. Resolve nicknames and group names in memory (Waterfall Step 2 collapsed)
       const userIds = Array.from(new Set(activePosts.map(p => p.user_id).filter(Boolean))) as string[];
-      const { data: usersData } = userIds.length
-        ? await supabase.from("community_users").select("*").in("id", userIds)
-        : { data: [] };
-
-      const usersMap = new Map((usersData || []).map((u: any) => [u.id, u]));
-      const groupsMap = new Map(fetchedGroups.map(g => [g.id, g]));
-      const expertUserIds = new Set(fetchedPages.map(p => p.created_by));
-
-      // Fetch comments for all these posts (in a bulk query if needed, or check expert replies)
-      // To determine hasExpertReply, we check if there are comments from expertUserIds on this post
       const postIds = activePosts.map(p => p.id);
-      const { data: commentsCheck } = postIds.length
-        ? await supabase.from("community_comments").select("post_id, user_id").in("post_id", postIds)
-        : { data: [] };
+      const expertUserIds = new Set(fetchedPages.map(p => p.created_by));
+      const expertUserIdsArr = Array.from(expertUserIds);
+
+      const [usersRes, commentsResCheck] = await Promise.all([
+        userIds.length
+          ? supabase.from("community_users").select("*").in("id", userIds)
+          : Promise.resolve({ data: [] }),
+        // Optimised: Only query comments written by expert users on the active feed posts
+        postIds.length && expertUserIdsArr.length
+          ? supabase.from("community_comments").select("post_id, user_id").in("post_id", postIds).in("user_id", expertUserIdsArr)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const usersMap = new Map((usersRes.data || []).map((u: any) => [u.id, u]));
+      const groupsMap = new Map(fetchedGroups.map(g => [g.id, g]));
 
       const expertPostIds = new Set(
-        (commentsCheck || [])
-          .filter((c: any) => c.user_id && expertUserIds.has(c.user_id))
-          .map((c: any) => c.post_id)
+        (commentsResCheck.data || []).map((c: any) => c.post_id)
       );
 
       const resolvedPosts = activePosts.map(post => {
