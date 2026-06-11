@@ -672,6 +672,23 @@ export const CommunityScreen = () => {
     }
   }, [selectedPost?.id]);
 
+  useEffect(() => {
+    const handleOpenComposer = () => {
+      setSelectedPost(null);
+      setSelectedGroup(null);
+      setSelectedPage(null);
+      setShowCreateGroup(false);
+      setShowCreatePage(false);
+      setActiveTab("Ask");
+    };
+
+    window.addEventListener("flowai:open-community-composer", handleOpenComposer);
+    return () => {
+      window.removeEventListener("flowai:open-community-composer", handleOpenComposer);
+    };
+  }, []);
+
+
   return (
     <MobileLayout gradient="linear-gradient(180deg, #FFF7FB 0%, #F7F2FF 52%, #F9FAFB 100%)">
       <div className="flex h-screen flex-col relative">

@@ -105,6 +105,24 @@ CREATE TABLE IF NOT EXISTS community_saved_posts (
   saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS community_blocks (
+  id              SERIAL PRIMARY KEY,
+  blocker_user_id TEXT NOT NULL,
+  blocked_user_id TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(blocker_user_id, blocked_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS community_reports (
+  id               SERIAL PRIMARY KEY,
+  reporter_user_id TEXT NOT NULL,
+  target_type      TEXT NOT NULL,
+  target_id        TEXT NOT NULL,
+  reason           TEXT NOT NULL,
+  description      TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ─── Seed Users ──────────────────────────────────────────────
 INSERT INTO community_users (id, nickname, avatar_color, created_at) VALUES
   ('user_priya_001',    'PriyaRose',      '#C2185B', NOW() - INTERVAL '120 days'),
