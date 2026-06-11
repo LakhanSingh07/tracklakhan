@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import type { Provider, Session, User } from "@supabase/supabase-js";
 import { requireSupabase, supabase } from "@/lib/supabase";
 
@@ -207,6 +207,7 @@ const formatDate = (d: Date) => d.toISOString().split("T")[0];
 const getAuthRedirectUrl = () => window.location.origin;
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const syncedUserIdRef = useRef<string | null>(null);
   const [currentScreen, setCurrentScreen] = useState<Screen>("splash");
   const [previousScreen, setPreviousScreen] = useState<Screen | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -492,7 +493,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("flowai_merchant_key", finalKey);
 
     // Sync only developer merchant parameters to auth user metadata if needed (or if they changed/default updated)
-    if (authSession?.user) {
+    if (authSession?.user && syncedUserIdRef.current !== authSession.user.id) {
       const needsSync =
         meta.dev_merchant_upi === undefined ||
         meta.dev_merchant_name === undefined ||
@@ -504,6 +505,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         meta.dev_merchant_key !== finalKey;
 
       if (needsSync) {
+        // Prevent recursive triggers
+        syncedUserIdRef.current = authSession.user.id;
         supabase!.auth.updateUser({
           data: {
             dev_merchant_upi: finalUpi,
@@ -511,8 +514,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             dev_merchant_provider: finalProvider,
             dev_merchant_key: finalKey
           }
-        }).catch(err => console.warn("Failed to sync initial local merchant config to Supabase metadata:", err));
+        }).catch(err => {
+          console.warn("Failed to sync initial local merchant config to Supabase metadata:", err);
+          // Reset ref on failure so it can retry if configuration changes
+          syncedUserIdRef.current = null;
+        });
+      } else {
+        // Already in sync, mark as synchronized
+        syncedUserIdRef.current = authSession.user.id;
       }
+    } else if (!authSession?.user) {
+      syncedUserIdRef.current = null;
     }
   }, [authSession]);
 

@@ -161,21 +161,7 @@ const SmartCycleDial = ({
   cycleLength: number;
 }) => {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
-  const [pulse, setPulse] = useState(0);
   const { t } = useTranslation();
-  const rafRef = useRef<number | null>(null);
-  const startRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    let frame: number;
-    const tick = (ts: number) => {
-      if (!startRef.current) startRef.current = ts;
-      setPulse(((ts - startRef.current) / 1000) % (Math.PI * 2));
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, []);
 
   const TOTAL = cycleLength || 28;
   const CX = 155, CY = 155;
@@ -203,7 +189,7 @@ const SmartCycleDial = ({
   const isOnPeriod = currentDay <= periodLength;
   const nextPeriodDay = isOnPeriod ? 1 : TOTAL - daysUntilNextPeriod + 1;
 
-  const pulseR = 1 + 0.06 * Math.sin(pulse * 2.5);
+
 
   const getPhaseLabel = (ph: string) => {
     if (ph === "menstruation") return t("phase_period");
@@ -288,8 +274,26 @@ const SmartCycleDial = ({
                   />
                 ) : isOvl ? (
                   <motion.g style={{ pointerEvents: "none" }}>
-                    <circle cx={lp.x} cy={lp.y} r={11 * pulseR} fill={style.bg} fillOpacity={0.22} />
-                    <circle cx={lp.x} cy={lp.y} r={7 * pulseR} fill={style.bg} fillOpacity={0.38} />
+                    <motion.circle
+                      cx={lp.x}
+                      cy={lp.y}
+                      r={11}
+                      fill={style.bg}
+                      fillOpacity={0.22}
+                      animate={{ scale: [1, 1.08, 1] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                      style={{ transformOrigin: `${lp.x}px ${lp.y}px` }}
+                    />
+                    <motion.circle
+                      cx={lp.x}
+                      cy={lp.y}
+                      r={7}
+                      fill={style.bg}
+                      fillOpacity={0.38}
+                      animate={{ scale: [1, 1.08, 1] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                      style={{ transformOrigin: `${lp.x}px ${lp.y}px` }}
+                    />
                     <circle cx={lp.x} cy={lp.y} r={4} fill="white" fillOpacity={0.95} />
                     <circle cx={lp.x} cy={lp.y} r={1.8} fill={style.bg} />
                   </motion.g>
@@ -312,10 +316,14 @@ const SmartCycleDial = ({
                 {isCur && (
                   <motion.g style={{ pointerEvents: "none" }}>
                     <motion.circle
-                      cx={dp.x} cy={dp.y}
-                      r={8 * pulseR}
+                      cx={dp.x}
+                      cy={dp.y}
+                      r={8}
                       fill={style.bg}
                       fillOpacity={0.22}
+                      animate={{ scale: [1, 1.08, 1] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                      style={{ transformOrigin: `${dp.x}px ${dp.y}px` }}
                     />
                     <circle cx={dp.x} cy={dp.y} r={5} fill={style.bg} stroke="white" strokeWidth={2.2} />
                   </motion.g>

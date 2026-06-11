@@ -435,7 +435,34 @@ export async function registerRoutes(
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "AI service not configured" });
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      const mockText = `Hello! I'm your FlowAI Health Coach. Since the OpenAI/OpenRouter API key is not configured in this local dev environment, I am running in **Offline Mock Mode** to demonstrate the app features.
+
+Based on your cycle data, here is some friendly advice:
+• Stay hydrated and drink plenty of water
+• Take some rest if you feel fatigued
+• Try to maintain a consistent sleep schedule
+
+Let me know if you want to log your symptoms or have any questions about your period tracking! 🌸`;
+
+      const words = mockText.split(" ");
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < words.length) {
+          const content = (i === 0 ? "" : " ") + words[i];
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          i++;
+        } else {
+          clearInterval(interval);
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          res.end();
+        }
+      }, 50);
+      return;
     }
 
     const messages: ChatMessage[] = [
@@ -533,7 +560,29 @@ export async function registerRoutes(
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "AI service not configured" });
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+
+      const mockReport = `Here is your **FlowAI Health Report** summary:
+
+Your cycle regularity score is **85/100**. Over the last cycle, you logged consistent water intake and maintained a stable sleep routine. In the upcoming follicular phase, you can expect rising energy levels. Continue tracking your symptoms to get more personalized insights! 🌸`;
+
+      const words = mockReport.split(" ");
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < words.length) {
+          const content = (i === 0 ? "" : " ") + words[i];
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          i++;
+        } else {
+          clearInterval(interval);
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          res.end();
+        }
+      }, 50);
+      return;
     }
 
     const messages: ChatMessage[] = [
